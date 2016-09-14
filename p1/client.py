@@ -3,7 +3,7 @@
 import socket, argparse, ssl
     
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="client")
     parser.add_argument('-p', metavar='port', dest = 'port', help='port number.')
     parser.add_argument('-s', dest='ssl', action='store_true', default=False, help='using ssl')
     parser.add_argument('hostname')
