@@ -1,5 +1,5 @@
 default:
-	echo "TODO"
+	chmod +x client
 liang:
 	python client.py cs5700f16.ccs.neu.edu 000076357
 
