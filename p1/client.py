@@ -21,7 +21,7 @@ def main():
     try:
         clientSocket.connect((args.hostname, port))
     except Exception as e:
-        print 'can not connect to %s:%d, err:%s' % (args.hostname, port, e)
+        print 'Can not connect to %s:%d, err: %s' % (args.hostname, port, e)
         clientSocket.close()
         return
     
@@ -30,8 +30,13 @@ def main():
     # print helloMsg
     
     while True:
-        statusMsg = clientSocket.recv(256)
-        # print statusMsg
+        try:
+            statusMsg = clientSocket.recv(256)
+        except Exception as e:
+            print 'Can not receive msg: %s' % e
+            clientSocket.close()
+            return
+            # print statusMsg
         if 'STATUS' in statusMsg:
             statusPos = statusMsg.find('STATUS')
             replyMsg = "cs5700fall2016 " +  str(eval(statusMsg[statusPos+7:-1])) + "\n"
