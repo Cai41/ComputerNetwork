@@ -36,7 +36,7 @@ def main():
             print 'Can not receive msg: %s' % e
             clientSocket.close()
             return
-            # print statusMsg
+        # print statusMsg
         if 'STATUS' in statusMsg:
             statusPos = statusMsg.find('STATUS')
             replyMsg = "cs5700fall2016 " +  str(eval(statusMsg[statusPos+7:-1])) + "\n"

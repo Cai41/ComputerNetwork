@@ -1,0 +1,16 @@
+1.To run the program:
+$ make
+$ $ ./client <-p port> <-s> [hostname] [NEU ID]
+
+2. High level approach:
+It's quite small and simple script, first we read all the arguments, and then make the socket and connect to host according to these
+arguments, send and receive all the messages according to protocol. If any above procedure fails, the program simply print the exception, close the
+socket and return.
+
+3. Challengs:
+1). How to pase the arguments and make the socket according to these arguments. Some arguments have default value, some doesn't, thus resulting
+various combinations.
+2). How to make SSL connections. Using wrong ssl version and ciphers would lead to handshake failure.
+
+4. Test:
+Try all different combinations of arguments: whether using ssl, whether specifying port number, wrong hostname, wrong neuid, etc.
