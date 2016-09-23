@@ -65,6 +65,51 @@ class Crawler:
         self.password = password
         self.queue = []
         self.visited = set([])
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.sock.connect((hostname, port))
+        except Exception as e:
+            print 'Can not connect to %s:%d, err: %s' % (hostname, port, e)
+            self.sock.close()
+            return
+
+    def login(self):
+        r = Request('GET', '/accounts/login/?next=/fakebook/')
+        r.add_header('Host', 'cs5700f16.ccs.neu.edu')
+        print r.getAll()
+        self.sock.send(r.getAll())
+        recvMsg = self.sock.recv(4096*4)
+        print recvMsg
+        csrf = re.search(r'csrftoken=([a-zA-Z0-9]+)', recvMsg)
+        session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
+        nextPage = re.search(r'name="next" value="([^"]+)"', recvMsg)
+        # print csrf.group(1)
+        # print session.group(1)
+        # print nextPage.group(0)
+        r = Request('POST', '/accounts/login/')
+        # print '{0}; {1}'.format(csrf.group(0), session.group(0))
+        r.add_header('Host', default_host)
+        r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
+
+        # TODO: redundant?
+        form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(
+                args.username, args.password, csrf.group(1), nextPage.group(1))
+        # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
+        r.add_form(
+            {
+                'username': args.username,
+                'password': args.password,
+                'csrfmiddlewaretoken': csrf.group(1),
+                'next': nextPage.group(1)
+            })
+        # r.add_content(form)
+        r.add_header('Content-length', str(len(r.getContent())))
+        print r.getAll()
+        self.sock.send(r.getAll())
+        msg = self.sock.recv(4096*4)
+        print msg
+        return
+
 
 
 def main():
@@ -76,49 +121,13 @@ def main():
 
     hostname = 'cs5700f16.ccs.neu.edu'
     port = 80
+    username = args.username
+    password = args.password
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((hostname, port))
-    except Exception as e:
-        print 'Can not connect to %s:%d, err: %s' % (hostname, port, e)
-        sock.close()
-        return
-    r = Request('GET', '/accounts/login/?next=/fakebook/')
-    r.add_header('Host', 'cs5700f16.ccs.neu.edu')
-    print r.getAll()
-    sock.send(r.getAll())
-    recvMsg = sock.recv(4096*4)
-    print recvMsg
-    csrf = re.search(r'csrftoken=([a-zA-Z0-9]+)', recvMsg)
-    session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
-    nextPage = re.search(r'name="next" value="([^"]+)"', recvMsg)
-    # print csrf.group(1)
-    # print session.group(1)
-    # print nextPage.group(0)
-    r = Request('POST', '/accounts/login/')
-    # print '{0}; {1}'.format(csrf.group(0), session.group(0))
-    r.add_header('Host', default_host)
-    r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
+    crawer = Crawler(hostname, port, username, password)
+    crawer.login()
+    crawer.sock.close()
 
-    # TODO: redundant?
-    form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(
-            args.username, args.password, csrf.group(1), nextPage.group(1))
-    # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
-    r.add_form(
-        {
-            'username': args.username,
-            'password': args.password,
-            'csrfmiddlewaretoken': csrf.group(1),
-            'next': nextPage.group(1)
-        })
-    # r.add_content(form)
-    r.add_header('Content-length', str(len(r.getContent())))
-    print r.getAll()
-    sock.send(r.getAll())
-    msg = sock.recv(4096*4)
-    print msg
-    sock.close()
 
 if __name__ == '__main__':
     main()
