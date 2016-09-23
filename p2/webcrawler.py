@@ -1,46 +1,61 @@
 #! /usr/bin/env python
 
-import socket, argparse, re
+import socket
+import argparse
+import re
 
 default_host = 'cs5700f16.ccs.neu.edu'
 default_connect = 'keep-alive'
-default_agent = 'Mozilla/5.0 (X11; Fedora; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36'
-default_accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+default_agent = 'Mozilla/5.0 (X11; Fedora; Linux x86_64) '\
+        'AppleWebKit/537.36 (KHTML, like Gecko) '\
+        'Chrome/52.0.2743.116 Safari/537.36'
+default_accept = 'text/html,application/xhtml+xml,'\
+        'application/xml;q=0.9,*/*;q=0.8'
 default_lang = 'en-US,en;q=0.5'
+
 
 class Request():
     def __init__(self, method, uri, version='HTTP/1.1'):
-        if method not in ['OPTIONS', 'GET', 'POST', 'HEAD', 'PUT', 'DELETE', 'TRACE', 'CONNECT']:
+        if method not in ['OPTIONS', 'GET', 'POST', 'HEAD', 'PUT',
+                          'DELETE', 'TRACE', 'CONNECT']:
             print "error: method not found"
         self.reqLine = method + ' ' + uri + ' ' + version + '\r\n'
         self.reqHeader = self.reqLine
         self.reqContent = ''
-        self.fields = {'method':method, 'uri':uri, 'version':version}
+        self.fields = {'method': method, 'uri': uri, 'version': version}
         # print self.reqLine
+
     def add_header(self, key, val):
         self.fields[key] = val
         self.reqHeader = self.reqHeader+key+': '+val+'\r\n'
+
     def add_content(self, content):
         self.reqContent = self.reqContent+content
+
     def repl(self, s):
         return '%'+format(ord(s.group()), 'X')
+
     def urlencode(self, s):
         return re.sub(r'[^a-zA-Z0-9]', self.repl, s)
+
     def add_form(self, dict):
         form = ''
         for k in dict:
             key = self.urlencode(k)
             value = self.urlencode(dict[k])
             if len(form) != 0:
-                form  = form + '&' + key + '=' + value
+                form = form + '&' + key + '=' + value
             else:
                 form = form + key + '=' + value
         self.add_content(form)
         # print form
+
     def getContent(self):
         return self.reqContent
+
     def getAll(self):
         return self.reqHeader+'\r\n'+self.reqContent+'\r\n'
+
 
 class Crawler:
     def __init__(self, hostname, port, username, password):
@@ -50,7 +65,8 @@ class Crawler:
         self.password = password
         self.queue = []
         self.visited = set([])
-    
+
+
 def main():
     parser = argparse.ArgumentParser(prog="webcrawler")
     parser.add_argument('username')
@@ -60,7 +76,7 @@ def main():
 
     hostname = 'cs5700f16.ccs.neu.edu'
     port = 80
-    
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect((hostname, port))
@@ -84,16 +100,25 @@ def main():
     # print '{0}; {1}'.format(csrf.group(0), session.group(0))
     r.add_header('Host', default_host)
     r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
-    form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(args.username, args.password, csrf.group(1), nextPage.group(1))
+
+    # TODO: redundant?
+    form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(
+            args.username, args.password, csrf.group(1), nextPage.group(1))
     # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
-    r.add_form({'username':args.username, 'password': args.password, 'csrfmiddlewaretoken': csrf.group(1), 'next': nextPage.group(1)})
+    r.add_form(
+        {
+            'username': args.username,
+            'password': args.password,
+            'csrfmiddlewaretoken': csrf.group(1),
+            'next': nextPage.group(1)
+        })
     # r.add_content(form)
     r.add_header('Content-length', str(len(r.getContent())))
-    print r.getAll() 
+    print r.getAll()
     sock.send(r.getAll())
     msg = sock.recv(4096*4)
     print msg
     sock.close()
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
