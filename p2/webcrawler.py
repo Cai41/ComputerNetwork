@@ -3,6 +3,7 @@
 import socket
 import argparse
 import re
+import logging
 
 default_host = 'cs5700f16.ccs.neu.edu'
 default_connect = 'keep-alive'
@@ -13,7 +14,19 @@ default_accept = 'text/html,application/xhtml+xml,'\
         'application/xml;q=0.9,*/*;q=0.8'
 default_lang = 'en-US,en;q=0.5'
 
+Debug = 1
 
+log = logging.getLogger()
+filehandler = logging.FileHandler('crawler.log')
+log.addHandler(filehandler)
+consolehandler = logging.StreamHandler()
+log.addHandler(consolehandler)
+log.setLevel(logging.DEBUG)
+
+def DPrint(debug_info):
+    if Debug > 0:
+        log.debug(debug_info)
+        
 class Request():
     def __init__(self, method, uri, version='HTTP/1.1'):
         if method not in ['OPTIONS', 'GET', 'POST', 'HEAD', 'PUT',
@@ -76,10 +89,10 @@ class Crawler:
     def login(self):
         r = Request('GET', '/accounts/login/?next=/fakebook/')
         r.add_header('Host', 'cs5700f16.ccs.neu.edu')
-        print r.getAll()
+        DPrint(r.getAll())
         self.sock.send(r.getAll())
         recvMsg = self.sock.recv(4096*4)
-        print recvMsg
+        DPrint(recvMsg)
         csrf = re.search(r'csrftoken=([a-zA-Z0-9]+)', recvMsg)
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
         nextPage = re.search(r'name="next" value="([^"]+)"', recvMsg)
@@ -92,8 +105,9 @@ class Crawler:
         r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
 
         # TODO: redundant?
-        form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(
-                self.username, self.password, csrf.group(1), nextPage.group(1))
+        # form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(
+        #         self.username, self.password, csrf.group(1), nextPage.group(1))
+        # r.add_content(form)
         # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
         r.add_form(
             {
@@ -102,12 +116,11 @@ class Crawler:
                 'csrfmiddlewaretoken': csrf.group(1),
                 'next': nextPage.group(1)
             })
-        # r.add_content(form)
         r.add_header('Content-length', str(len(r.getContent())))
-        print r.getAll()
+        DPrint(r.getAll())
         self.sock.send(r.getAll())
         msg = self.sock.recv(4096*4)
-        print msg
+        DPrint(msg)
         return
 
 
