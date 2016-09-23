@@ -41,9 +41,18 @@ class Request():
         return self.reqContent
     def getAll(self):
         return self.reqHeader+'\r\n'+self.reqContent+'\r\n'
+
+class Crawler:
+    def __init__(self, hostname, port, username, password):
+        self.hostname = hostname
+        self.port = port
+        self.username = username
+        self.password = password
+        self.queue = []
+        self.visited = set([])
     
 def main():
-    parser = argparse.ArgumentParser(prog="crawler")
+    parser = argparse.ArgumentParser(prog="webcrawler")
     parser.add_argument('username')
     parser.add_argument('password')
     args = parser.parse_args()
