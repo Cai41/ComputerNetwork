@@ -93,12 +93,12 @@ class Crawler:
 
         # TODO: redundant?
         form = 'username={}&password={}&csrfmiddlewaretoken={}&next={}\r\n'.format(
-                args.username, args.password, csrf.group(1), nextPage.group(1))
+                self.username, self.password, csrf.group(1), nextPage.group(1))
         # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
         r.add_form(
             {
-                'username': args.username,
-                'password': args.password,
+                'username': self.username,
+                'password': self.password,
                 'csrfmiddlewaretoken': csrf.group(1),
                 'next': nextPage.group(1)
             })
