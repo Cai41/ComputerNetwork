@@ -124,9 +124,9 @@ def main():
     username = args.username
     password = args.password
 
-    crawer = Crawler(hostname, port, username, password)
-    crawer.login()
-    crawer.sock.close()
+    crawler = Crawler(hostname, port, username, password)
+    crawler.login()
+    crawler.sock.close()
 
 
 if __name__ == '__main__':
