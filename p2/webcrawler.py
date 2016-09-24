@@ -79,10 +79,12 @@ class Crawler:
         self.password = password
         self.queue = []
         self.visited = set([])
+        
         self.lenPattern = re.compile(r'Content-Length: ([0-9]+)')
         self.chkPattern = re.compile(r'Transfer-Encoding: chunked')
         self.terminalPattern = re.compile(r'0\r\n\r\n')
         self.chunkPattern = re.compile(r'([0-9a-f]+)\r\n(.+)\r\n([0-9a-f]+)\r\n', re.DOTALL)
+        
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.sock.connect((hostname, port))
@@ -127,7 +129,7 @@ class Crawler:
             return content != -1 and len(recvMsg[content+4:]) == int(length.group(1))
         else:
             # Retry? Throw exception?
-            DPrint('Wo ri, this is impossible')
+            DPrint('This is impossible')
             return False
 
     # return the content of message
@@ -165,17 +167,13 @@ class Crawler:
                 time.sleep(0.1)
         return recvMsg
 
-    def searchURL(self, s):
-        # TODO
-        DPrint('searchURL not implemented')
-
     def handleRespMsg(self, recvMsg):
         statusLine = recvMsg[:recvMsg.find('\r\n')]
         statusFields = statusLine.split()
         try:
             code = int(statusFields[1])
         except:
-            DPrint('zhe bu ke neng')
+            DPrint('This is impossible..')
         if code == 200:
             DPrint('OK')
             return self.handle200(recvMsg)
@@ -199,7 +197,22 @@ class Crawler:
         # TODO:
         # call self.getContent, self.searchURL, add them to self.queue and self.visited
         DPrint('handle200 not implement')
-        
+        cont = self.getContent(recvMsg)
+        self.searchURL(cont)
+
+    def searchURL(self, cont):
+        # TODO
+        DPrint('searchURL not implemented')
+        while True:
+            link = cont.find('a href')
+            if link == -1:
+                break
+            start = cont.find('"', link)
+            end = cont.find('"', start+1)
+            url = cont[start+1: end]
+            DPrint(url)                
+            cont = cont[end:]
+
     def login(self):
         # GET login page
         r = Request('GET', '/accounts/login/?next=/fakebook/')
@@ -234,7 +247,8 @@ class Crawler:
         r.add_header('Host', default_host)
         r.add_header('Cookie', '{0}'.format(self.session))
         recvMsg = self.getResponse(r)
-        self.getContent(recvMsg)        
+        self.handleRespMsg(recvMsg)
+        # self.getContent(recvMsg)        
         return
 
 def main():
