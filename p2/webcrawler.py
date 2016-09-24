@@ -82,7 +82,7 @@ class Crawler:
         self.lenPattern = re.compile(r'Content-Length: ([0-9]+)')
         self.chkPattern = re.compile(r'Transfer-Encoding: chunked')
         self.terminalPattern = re.compile(r'0\r\n\r\n')
-        self.chunkPattern = re.compile(r'([0-9a-f]+)\r\n(((?!(\r\n)).)+)\r\n', re.DOTALL)
+        self.chunkPattern = re.compile(r'([0-9a-f]+)\r\n(.+)\r\n([0-9a-f]+)\r\n', re.DOTALL)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.sock.connect((hostname, port))
@@ -137,8 +137,10 @@ class Crawler:
         contentPos = recvMsg.find('\r\n\r\n')
         content = ''
         if chunked is not None and contentPos != -1:
-            for m in self.chunkPattern.finditer(recvMsg, contentPos):
+            m = self.chunkPattern.search(recvMsg, contentPos)
+            while m is not None:        
                 content += recvMsg[m.start(2): m.end(2)]
+                m = self.chunkPattern.search(recvMsg, m.end(2))
         elif length is not None and contentPos != -1 and len(recvMsg[contentPos+4:]) <= int(length.group(1)):
             content = recvMsg[contentPos+4: contentPos+4+int(length.group(1))]
         DPrint('Content:' + content)
