@@ -91,12 +91,11 @@ class Crawler:
             self.sock.close()
             return
 
-    # 1. checks whether the message is complete, if not wait
+    # 1. checks whether the message is complete, if not, keep receiving
     # 2. The other solution (self.recvAll()) is to set timeout(bad solution..)
     def getResponse(self, req):
         recvMsg = ''
         DPrint(req.getAll())
-        DPrint(req.fields['method'])
         self.sock.send(req.getAll())
         recvMsg = self.sock.recv(4096)
         while not self.isComplete(recvMsg, req):
@@ -196,7 +195,7 @@ class Crawler:
             
     def handle200(self, recvMsg):
         # TODO:
-        # call self.searchURL, add them to queue and visited
+        # call self.getContent, self.searchURL, add them to self.queue and self.visited
         DPrint('handle200 not implement')
         
     def login(self):
