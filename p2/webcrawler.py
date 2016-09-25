@@ -6,19 +6,20 @@ import re
 import logging
 import time
 import Queue
-
-Debug = 1
+import httpClient
 
 log = logging.getLogger()
-filehandler = logging.FileHandler('crawler.log')
-log.addHandler(filehandler)
-consolehandler = logging.StreamHandler()
-log.addHandler(consolehandler)
 log.setLevel(logging.DEBUG)
 
-def DPrint(debug_info):
-    if Debug > 0:
-        log.debug(debug_info)
+fh = logging.FileHandler('crawler.log')
+ch = logging.StreamHandler()
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:\n%(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+log.addHandler(fh)
+log.addHandler(ch)
 
 default_host = 'cs5700f16.ccs.neu.edu'
 default_connect = 'keep-alive'
@@ -32,49 +33,6 @@ login_url = '/accounts/login/?next=/fakebook/'
 
 OK = 0
 RETRY = -1
-
-class Request():
-    def __init__(self, method, uri, version='HTTP/1.1'):
-        if method not in ['OPTIONS', 'GET', 'POST', 'HEAD', 'PUT',
-                          'DELETE', 'TRACE', 'CONNECT']:
-            DPrint("error: method not found")
-        self.reqLine = method + ' ' + uri + ' ' + version + '\r\n'
-        self.reqHeader = self.reqLine
-        self.reqContent = ''
-        self.fields = {'method': method, 'uri': uri, 'version': version}
-        # print self.reqLine
-
-    def add_header(self, key, val):
-        self.fields[key] = val
-        self.reqHeader = self.reqHeader+key+': '+val+'\r\n'
-
-    def add_content(self, content):
-        self.reqContent = self.reqContent+content
-
-    def repl(self, s):
-        return '%'+format(ord(s.group()), 'X')
-
-    def urlencode(self, s):
-        return re.sub(r'[^a-zA-Z0-9]', self.repl, s)
-
-    def add_form(self, dict):
-        form = ''
-        for k in dict:
-            key = self.urlencode(k)
-            value = self.urlencode(dict[k])
-            if len(form) != 0:
-                form = form + '&' + key + '=' + value
-            else:
-                form = form + key + '=' + value
-        self.add_content(form)
-        # DPrint(form)
-
-    def getContent(self):
-        return self.reqContent
-
-    def getAll(self):
-        return self.reqHeader+'\r\n'+self.reqContent+'\r\n'
-
 
 class Crawler:
     def __init__(self, hostname, port, username, password):
@@ -92,59 +50,8 @@ class Crawler:
         self.chunkPattern = re.compile(r'([0-9a-f]+)\r\n(.+)\r\n([0-9a-f]+)\r\n', re.DOTALL)
         self.flagPattern = re.compile(r'<h2 class=\'secret_flag\' style=\"color:red\">FLAG: ([0-9a-zA-Z]+)</h2>')
         self.redirectPattern = re.compile(r'Location: (.+)\r\n')
-        
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            self.sock.connect((hostname, port))
-        except Exception as e:
-            print 'Can not connect to %s:%d, err: %s' % (hostname, port, e)
-            self.sock.close()
-            return
 
-    # 1. checks whether the message is complete, if not, keep receiving
-    # 2. The other solution (self.recvAll()) is to set timeout(bad solution..)
-    def getResponse(self, req):
-        recvMsg = ''
-        DPrint(req.getAll())
-        self.sock.send(req.getAll())
-        DPrint(self.flags)
-        recvMsg = self.sock.recv(4096)
-        while not self.isComplete(recvMsg, req):
-            recvMsg += self.sock.recv(4096)
-        # recvMsg = self.recvAll()
-        DPrint(recvMsg)
-        return recvMsg
-
-    # According to https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4. The length of body may be
-    # 1. zero, if code is 204, 304, 1XX or request is HEAD, or
-    # 2. identified by chunked transfer-encoding, if Transfer-Encoding is specified in header, or
-    # 3. Content-Length, if Content-Length is specified in head, or
-    # 4. is identified by self-delimiting media, if media type is multipart/byteranges.(Ignore in this project)
-    def isComplete(self, recvMsg, req):
-        if len(recvMsg) == 0:
-            return False
-        length = self.lenPattern.search(recvMsg)
-        chunked = self.chkPattern.search(recvMsg)
-        statusLine = recvMsg[:recvMsg.find('\r\n')]
-        DPrint('fuck:')
-        DPrint(len(recvMsg))
-        statusFields = statusLine.split()
-        code = int(statusFields[1])
-
-        if req.fields['method'] == 'HEAD' or code == 204 or code == 304 or 100 <= code < 200:
-            return True
-        if chunked is not None:
-            return self.terminalPattern.search(recvMsg) is not None
-        elif length is not None:
-            if length.group(1) == 0:
-                return True
-            content = recvMsg.find('\r\n\r\n')
-            DPrint('len'+str(len(recvMsg[content+4:])))
-            return content != -1 and len(recvMsg[content+4:]) == int(length.group(1))
-        else:
-            # Retry? Throw exception?
-            DPrint('This is impossible')
-            return False
+        self.httpConn = httpClient.HttpConn(self.hostname)
 
     # return the content of message
     def getContent(self, recvMsg):
@@ -159,84 +66,60 @@ class Crawler:
                 m = self.chunkPattern.search(recvMsg, m.end(2))
         elif length is not None and contentPos != -1 and len(recvMsg[contentPos+4:]) <= int(length.group(1)):
             content = recvMsg[contentPos+4: contentPos+4+int(length.group(1))]
-        DPrint('Content:' + content)
-        DPrint('Content Size:' + str(len(content)))
+        log.debug('Content:' + content)
+        log.debug('Content Size:' + str(len(content)))
         return content
 
-    # might not need this function
-    def recvAll(self, timeout=0.5):
-        recvMsg = ''
-        begin = time.time()
-        self.sock.setblocking(0)
-        while time.time() - begin < timeout:
-            buf = None
-            try:
-                buf = self.sock.recv(4096)
-            except:
-                pass
-            if buf is not None:
-                recvMsg += buf
-                begin = time.time()
-            else:
-                time.sleep(0.1)
-        return recvMsg
-
-    def handleRespMsg(self, recvMsg):
+    def handleRespMsg(self, recvMsg, currentUrl):
         statusLine = recvMsg[:recvMsg.find('\r\n')]
         statusFields = statusLine.split()
         try:
             code = int(statusFields[1])
         except:
-            DPrint('This is impossible..')
-        if 'Connection: close' in recvMsg:
-            self.sock.close()
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((self.hostname, self.port))            
+            log.debug('This is impossible..')
+            return OK
         if code == 200:
-            DPrint('OK')
-            return self.handle200(recvMsg)
+            log.debug('OK')
+            return self.handle200(recvMsg, currentUrl)
         elif code == 302:
             # TODO
-            DPrint('FOUND')
+            log.debug('FOUND')
             return OK
         elif code == 301:
-            # TODO
-            DPrint('MOVED')
+            log.debug('MOVED')
             redirect = self.redirectPattern.search(recvMsg)
             url = redirect.group(1)
-            if self.validURL(url) is not None and url not in self.visited:
-                self.visited.add(url)
-                self.queue.put(url)
+            vurl = self.validURL(url)
+            if vurl is not None and vurl not in self.visited:
+                self.visited.add(vurl)
+                self.queue.put(vurl)
             return OK
-        elif code == 403:
-            # TODO
-            DPrint('FORBIDDEN')
+        elif code == 403 or code == 404:
+            log.debug('FORBIDDEN')
             return OK
         elif code == 500:
-            # TODO
-            DPrint('ServerErr')
+            log.debug('ServerErr')
             return RETRY            
         else:
             # TODO
-            DPrint('Unhandled Error')
+            log.debug('Unhandled Error')
             return OK
             
-    def handle200(self, recvMsg):
-        # TODO:
+    def handle200(self, recvMsg, currentUrl):
         # call self.getContent, self.searchURL, add them to self.queue and self.visited
-        DPrint('handle200 not implement')
         cont = self.getContent(recvMsg)
         urls = self.searchURL(cont)
-        # DPrint(urls)
+        # log.debug(urls)
         for url in urls:
-            if self.validURL(url) is not None and url not in self.visited:
-                self.visited.add(url)
-                self.queue.put(url)
+            vurl = self.validURL(url)
+            if vurl is not None and vurl not in self.visited:
+                self.visited.add(vurl)
+                self.queue.put(vurl)
         f = self.flagPattern.search(cont)
         if f is not None:
-            self.flags.append(f.group(1))
-        # DPrint(self.visited)
-        # DPrint(self.queue)
+            self.flags.append((f.group(1), currentUrl))
+        # log.debug(self.visited)
+        # log.debug(self.queue)
         return OK
 
     def searchURL(self, cont):
@@ -260,22 +143,22 @@ class Crawler:
             return url
         return None
 
-    def wrapOpenURL(self, url):
-        r = Request('GET', url)
+    def wrapProcessURL(self, url):
+        r = httpClient.Request('GET', url)
         r.add_header('Host', default_host)
         r.add_header('Cookie', '{0}'.format(self.session))
         # r.add_header('Connection', 'keep-alive')
-        recvMsg = self.getResponse(r)
-        while self.handleRespMsg(recvMsg) == RETRY:
-            DPrint('retry')
-            recvMsg = self.getResponse(r)
+        recvMsg = self.httpConn.getResponse(r)
+        while recvMsg != '' and self.handleRespMsg(recvMsg, url) == RETRY:
+            log.debug('retry')
+            recvMsg = self.httpConn.getResponse(r)
         
     def login(self):
         # GET login page
-        r = Request('GET', login_url)
+        r = httpClient.Request('GET', login_url)
         r.add_header('Host', default_host)
         # r.add_header('Connection', 'keep-alive')
-        recvMsg = self.getResponse(r)
+        recvMsg = self.httpConn.getResponse(r)
         # self.getContent(recvMsg)
         self.visited.add(login_url)
 
@@ -283,7 +166,7 @@ class Crawler:
         csrf = re.search(r'csrftoken=([a-zA-Z0-9]+)', recvMsg)
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
         nextPage = re.search(r'name="next" value="([^"]+)"', recvMsg)
-        r = Request('POST', '/accounts/login/')
+        r = httpClient.Request('POST', '/accounts/login/')
         r.add_header('Host', default_host)
         r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
         # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
@@ -295,27 +178,27 @@ class Crawler:
                 'next': nextPage.group(1)
             })
         r.add_header('Content-length', str(len(r.getContent())))
-        recvMsg = self.getResponse(r)
+        recvMsg = self.httpConn.getResponse(r)
         # self.getContent(recvMsg)
         
         # GET main page and update session cookie
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
         self.session = session.group(0)
-        r = Request('GET', '/fakebook/')
+        r = httpClient.Request('GET', '/fakebook/')
         r.add_header('Host', default_host)
         r.add_header('Cookie', '{0}'.format(self.session))
-        recvMsg = self.getResponse(r)
+        recvMsg = self.httpConn.getResponse(r)
         self.visited.add('/fakebook/')
-        self.handleRespMsg(recvMsg)
+        self.handleRespMsg(recvMsg, '/fakebook/')
         # self.getContent(recvMsg)        
         return
 
     def search(self):
-        DPrint('search not implemented')
         while not self.queue.empty() and len(self.flags) < 5:
             url = self.queue.get()
-            DPrint(url)
-            self.wrapOpenURL(url)
+            log.debug(url)
+            self.wrapProcessURL(url)
+            log.debug(self.flags)
             
 
 def main():
@@ -333,8 +216,8 @@ def main():
     crawler = Crawler(hostname, port, username, password)
     crawler.login()
     crawler.search()
-    DPrint(crawler.flags)
-    crawler.sock.close()
+    log.debug(crawler.flags)
+    crawler.httpConn.close()
 
 
 if __name__ == '__main__':
