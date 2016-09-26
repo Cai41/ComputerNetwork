@@ -35,6 +35,19 @@ login_url = '/accounts/login/?next=/fakebook/'
 OK = 0
 RETRY = -1
 
+
+class MyHTMLParser(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.urls = set([])
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'a':
+            for attr in attrs:
+                if attr[0] == 'href':
+                    self.urls.add(attr[1])
+                    break
+
 class Crawler:
     def __init__(self, hostname, port, username, password):
         self.hostname = hostname
@@ -125,19 +138,9 @@ class Crawler:
 
     def searchURL(self, cont):
         # TODO
-        class MyHTMLParser(HTMLParser):
-            def __init__(self):
-                self.urls = set([])
-
-            def handle_starttag(self, tag, attrs):
-                if tag == 'a':
-                    for attr in attrs:
-                        if attr[0] == 'href':
-                            self.urls.add(attr[1])
-                            break
-        parser = MyHTMLParser()
-        parser.feed(cont)
-        return parser.urls
+        htmlParser = MyHTMLParser()
+        htmlParser.feed(cont)
+        return htmlParser.urls
 
         # while True:
         #     link = cont.find('a href')
