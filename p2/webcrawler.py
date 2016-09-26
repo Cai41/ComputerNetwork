@@ -7,6 +7,7 @@ import logging
 import time
 import Queue
 import httpClient
+from HTMLParser import HTMLParser
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
@@ -124,17 +125,30 @@ class Crawler:
 
     def searchURL(self, cont):
         # TODO
-        urls = []
-        while True:
-            link = cont.find('a href')
-            if link == -1:
-                break
-            start = cont.find('"', link)
-            end = cont.find('"', start+1)
-            url = cont[start+1: end]
-            urls.append(url)
-            cont = cont[end:]
-        return urls
+        class MyHTMLParser(HTMLParser):
+            def __init__(self):
+                self.urls = set([])
+
+            def handle_starttag(self, tag, attrs):
+                if tag == 'a':
+                    for attr in attrs:
+                        if attr[0] == 'href':
+                            self.urls.add(attr[1])
+                            break
+        parser = MyHTMLParser()
+        parser.feed(cont)
+        return parser.urls
+
+        # while True:
+        #     link = cont.find('a href')
+        #     if link == -1:
+        #         break
+        #     start = cont.find('"', link)
+        #     end = cont.find('"', start+1)
+        #     url = cont[start+1: end]
+        #     urls.append(url)
+        #     cont = cont[end:]
+        # return urls
 
     def validURL(self, url):
         if 'http://cs5700f16.ccs.neu.edu' in url:
