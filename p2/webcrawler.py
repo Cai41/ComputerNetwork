@@ -24,7 +24,7 @@ ch.setFormatter(formatter)
 log.addHandler(fh)
 log.addHandler(ch)
 
-default_host = 'cs5700f16.ccs.neu.edu'
+# default_host = 'cs5700f16.ccs.neu.edu'
 # default_connect = 'keep-alive'
 # default_agent = 'Mozilla/5.0 (X11; Fedora; Linux x86_64) '\
 #         'AppleWebKit/537.36 (KHTML, like Gecko) '\
@@ -168,7 +168,7 @@ class Crawler:
 
     def wrapProcessURL(self, url):
         r = httpClient.Request('GET', url)
-        r.add_header('Host', default_host)
+        r.add_header('Host', self.hostname)
         r.add_header('Cookie', '{0}'.format(self.session))
         # r.add_header('Connection', 'keep-alive')
         recvMsg = self.httpConn.getResponse(r)
@@ -179,7 +179,7 @@ class Crawler:
     def login(self):
         # GET login page
         r = httpClient.Request('GET', login_url)
-        r.add_header('Host', default_host)
+        r.add_header('Host', self.hostname)
         # r.add_header('Connection', 'keep-alive')
         recvMsg = self.httpConn.getResponse(r)
         # self.getContent(recvMsg)
@@ -190,7 +190,7 @@ class Crawler:
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
         nextPage = re.search(r'name="next" value="([^"]+)"', recvMsg)
         r = httpClient.Request('POST', '/accounts/login/')
-        r.add_header('Host', default_host)
+        r.add_header('Host', self.hostname)
         r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
         # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
         r.add_form(
@@ -208,7 +208,7 @@ class Crawler:
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
         self.session = session.group(0)
         r = httpClient.Request('GET', '/fakebook/')
-        r.add_header('Host', default_host)
+        r.add_header('Host', self.hostname)
         r.add_header('Cookie', '{0}'.format(self.session))
         recvMsg = self.httpConn.getResponse(r)
         self.visited.add('/fakebook/')
