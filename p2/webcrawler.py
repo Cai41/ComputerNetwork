@@ -8,6 +8,7 @@ import time
 import Queue
 import httpClient
 from HTMLParser import HTMLParser
+from urlparse import urlparse
 
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
@@ -23,20 +24,20 @@ log.addHandler(fh)
 log.addHandler(ch)
 
 default_host = 'cs5700f16.ccs.neu.edu'
-default_connect = 'keep-alive'
-default_agent = 'Mozilla/5.0 (X11; Fedora; Linux x86_64) '\
-        'AppleWebKit/537.36 (KHTML, like Gecko) '\
-        'Chrome/52.0.2743.116 Safari/537.36'
-default_accept = 'text/html,application/xhtml+xml,'\
-        'application/xml;q=0.9,*/*;q=0.8'
-default_lang = 'en-US,en;q=0.5'
+# default_connect = 'keep-alive'
+# default_agent = 'Mozilla/5.0 (X11; Fedora; Linux x86_64) '\
+#         'AppleWebKit/537.36 (KHTML, like Gecko) '\
+#         'Chrome/52.0.2743.116 Safari/537.36'
+# default_accept = 'text/html,application/xhtml+xml,'\
+#         'application/xml;q=0.9,*/*;q=0.8'
+# default_lang = 'en-US,en;q=0.5'
 login_url = '/accounts/login/?next=/fakebook/'
 
 OK = 0
 RETRY = -1
 
 
-class MyHTMLParser(HTMLParser):
+class LinkParser(HTMLParser):
     def __init__(self):
         self.reset()
         self.urls = set([])
@@ -138,8 +139,9 @@ class Crawler:
 
     def searchURL(self, cont):
         # TODO
-        htmlParser = MyHTMLParser()
+        htmlParser = LinkParser()
         htmlParser.feed(cont)
+        htmlParser.close()
         return htmlParser.urls
 
         # while True:
@@ -154,10 +156,13 @@ class Crawler:
         # return urls
 
     def validURL(self, url):
-        if 'http://cs5700f16.ccs.neu.edu' in url:
-            return url[url.find('.edu')+4:]
-        if url[0:1] == '/':
+        # if 'http://cs5700f16.ccs.neu.edu' in url:
+        #    return url[url.find('.edu')+4:]
+        if url[0] == '/':
             return url
+        o = urlparse(url)
+        if o.hostname is not None and o.hostname == 'cs5700f16.ccs.neu.edu':
+            return o.path
         return None
 
     def wrapProcessURL(self, url):
