@@ -16,7 +16,8 @@ log.setLevel(logging.DEBUG)
 fh = logging.FileHandler('crawler.log')
 ch = logging.StreamHandler()
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:\n%(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:\n'
+                              '%(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 
@@ -49,6 +50,7 @@ class LinkParser(HTMLParser):
                     self.urls.add(attr[1])
                     break
 
+
 class Crawler:
     def __init__(self, hostname, port, username, password):
         self.hostname = hostname
@@ -58,7 +60,6 @@ class Crawler:
         self.queue = Queue.Queue()
         self.visited = set([])
         self.flags = []
-        
         self.lenPattern = re.compile(r'Content-Length: ([0-9]+)')
         self.chkPattern = re.compile(r'Transfer-Encoding: chunked')
         self.terminalPattern = re.compile(r'0\r\n\r\n')
@@ -76,7 +77,7 @@ class Crawler:
         content = ''
         if chunked is not None and contentPos != -1:
             m = self.chunkPattern.search(recvMsg, contentPos)
-            while m is not None:        
+            while m is not None:
                 content += recvMsg[m.start(2): m.end(2)]
                 m = self.chunkPattern.search(recvMsg, m.end(2))
         elif length is not None and contentPos != -1 and len(recvMsg[contentPos+4:]) <= int(length.group(1)):
@@ -114,12 +115,12 @@ class Crawler:
             return OK
         elif code == 500:
             log.debug('ServerErr')
-            return RETRY            
+            return RETRY
         else:
             # TODO
             log.debug('Unhandled Error')
             return OK
-            
+
     def handle200(self, recvMsg, currentUrl):
         # call self.getContent, self.searchURL, add them to self.queue and self.visited
         cont = self.getContent(recvMsg)
@@ -174,7 +175,7 @@ class Crawler:
         while recvMsg != '' and self.handleRespMsg(recvMsg, url) == RETRY:
             log.debug('retry')
             recvMsg = self.httpConn.getResponse(r)
-        
+
     def login(self):
         # GET login page
         r = httpClient.Request('GET', login_url)
@@ -202,7 +203,7 @@ class Crawler:
         r.add_header('Content-length', str(len(r.getContent())))
         recvMsg = self.httpConn.getResponse(r)
         # self.getContent(recvMsg)
-        
+
         # GET main page and update session cookie
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
         self.session = session.group(0)
@@ -212,7 +213,7 @@ class Crawler:
         recvMsg = self.httpConn.getResponse(r)
         self.visited.add('/fakebook/')
         self.handleRespMsg(recvMsg, '/fakebook/')
-        # self.getContent(recvMsg)        
+        # self.getContent(recvMsg)
         return
 
     def search(self):
