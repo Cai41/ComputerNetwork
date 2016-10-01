@@ -12,24 +12,18 @@ from urlparse import urlparse
 
 # debug level logger
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.ERROR)
 
-fh = logging.FileHandler('crawler.log')
 ch = logging.StreamHandler()
-
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:\n'
                               '%(message)s')
-fh.setFormatter(formatter)
 ch.setFormatter(formatter)
-
-log.addHandler(fh)
 log.addHandler(ch)
 
 login_url = '/accounts/login/?next=/fakebook/'
 
 OK = 0
 RETRY = -1
-
 
 class LinkParser(HTMLParser):
     """subclass of HTMLParser, used for extracting outlinks"""
@@ -44,7 +38,6 @@ class LinkParser(HTMLParser):
                     self.urls.add(attr[1])
                     break # an 'a' tag may have multiple attrs, break once we
                           # find the href attr 
-
 
 class Crawler:
     def __init__(self, hostname, port, username, password):
@@ -84,40 +77,62 @@ class Crawler:
         '''
         self.httpConn = httpClient.HttpConn(self.hostname)
 
-    # return the content of message
+    '''
+    Given the http message, remove the header and return the content of message
+    '''
     def getContent(self, recvMsg):
+        '''
+        search the length of the message, or whether the message is in chunked encoding
+        find the starting position of the content
+        '''
         length = self.lenPattern.search(recvMsg)
         chunked = self.chkPattern.search(recvMsg)
         contentPos = recvMsg.find('\r\n\r\n')
         content = ''
+
+        '''
+        if the message is chunked encoding, and content is not empty
+        '''
         if chunked is not None and contentPos != -1:
+            ''' 
+            searching for every chunk in the content,
+            and concatenate each chunk
+            '''
             m = self.chunkPattern.search(recvMsg, contentPos)
             while m is not None:
                 content += recvMsg[m.start(2): m.end(2)]
                 m = self.chunkPattern.search(recvMsg, m.end(2))
         elif length is not None and contentPos != -1 and len(recvMsg[contentPos+4:]) <= int(length.group(1)):
+            '''
+            if message is not chunked encoding, then find the total length if the content
+            Get the content of message accoring to the length
+            '''
             content = recvMsg[contentPos+4: contentPos+4+int(length.group(1))]
         log.debug('Content:' + content)
         log.debug('Content Size:' + str(len(content)))
         return content
 
     def handleRespMsg(self, recvMsg, currentUrl):
+        '''
+        The first line is the status line in http header
+        The reponse code is the second part of status line
+        '''
         statusLine = recvMsg[:recvMsg.find('\r\n')]
         statusFields = statusLine.split()
         try:
             code = int(statusFields[1])
         except:
-            log.debug('This is impossible..')
             return OK
         if code == 200:
-            log.debug('OK')
+            '''
+            If response code is 200, call handle200 to process the message: searching for urls and flags in this page
+            '''
             return self.handle200(recvMsg, currentUrl)
-        elif code == 302:
-            # TODO
-            log.debug('FOUND')
-            return OK
         elif code == 301:
-            log.debug('MOVED')
+            '''
+            If response code is 301, search the new URL in the header, 
+            and add it to the queue if it is a valid url
+            '''
             redirect = self.redirectPattern.search(recvMsg)
             url = redirect.group(1)
             vurl = self.validURL(url)
@@ -126,40 +141,60 @@ class Crawler:
                 self.queue.put(vurl)
             return OK
         elif code == 403 or code == 404:
-            log.debug('FORBIDDEN')
+            '''
+            Forbidden/Not Found: Abandon the URL
+            '''
             return OK
         elif code == 500:
-            log.debug('ServerErr')
+            '''
+            ServerErr: return RETRY to tell the crawler to try again on this url
+            '''
             return RETRY
         else:
-            # TODO
             log.debug('Unhandled Error')
             return OK
 
     def handle200(self, recvMsg, currentUrl):
-        # call self.getContent, self.searchURL, add them to self.queue and self.visited
+        '''
+        call self.getContent to get the content of message
+        call self.searchURL to search for all the url in the content
+        and add each valid url to self.queue and self.visited.
+        A valid url is not visited url and also under the domain http://cs5700f16.ccs.neu.edu
+        '''
         cont = self.getContent(recvMsg)
         urls = self.searchURL(cont)
-        # log.debug(urls)
         for url in urls:
             vurl = self.validURL(url)
+            '''
+            Add each valid url to the Queue, and mark as visited
+            '''
             if vurl is not None and vurl not in self.visited:
                 self.visited.add(vurl)
                 self.queue.put(vurl)
+
+        '''
+        Searching for flags in this message, and save them t self.glags
+        '''
         f = self.flagPattern.search(cont)
         if f is not None:
             self.flags.append((f.group(1), currentUrl))
-        # log.debug(self.visited)
-        # log.debug(self.queue)
         return OK
 
-    def searchURL(self, cont):
+    def searchURL(self, content):
+        '''
+        make a parser to searching for all urls in the content
+        return all urls founded in the content
+        '''
         htmlParser = LinkParser()
-        htmlParser.feed(cont)
+        htmlParser.feed(content)
         htmlParser.close()
         return htmlParser.urls
 
     def validURL(self, url):
+        '''
+        A valid url is either begin with '/' or under the 'cs5700f16.ccs.neu.edu' domain
+        Otherwise return None
+        '''
         if url[0] == '/':
             return url
         o = urlparse(url)
@@ -171,7 +206,6 @@ class Crawler:
         r = httpClient.Request('GET', url)
         r.add_header('Host', self.hostname)
         r.add_header('Cookie', '{0}'.format(self.session))
-        # r.add_header('Connection', 'keep-alive')
         recvMsg = self.httpConn.getResponse(r)
         while recvMsg != '' and self.handleRespMsg(recvMsg, url) == RETRY:
             log.debug('retry')
@@ -220,24 +254,33 @@ class Crawler:
             log.debug(self.flags)
             
 
-def main():
+if __name__ == '__main__':
+    '''
+    parse the username and password form command line
+    '''
     parser = argparse.ArgumentParser(prog="webcrawler")
     parser.add_argument('username')
     parser.add_argument('password')
     args = parser.parse_args()
-    # print args
 
+    '''
+    set default hostname and port for project2
+    save the username and password
+    '''
     hostname = 'cs5700f16.ccs.neu.edu'
     port = 80
     username = args.username
     password = args.password
 
+    '''
+    make a crawler with default hostname, port and given username and password
+    login to the fakebook
+    begin to search
+    when searching is ended, print every flag
+    '''
     crawler = Crawler(hostname, port, username, password)
     crawler.login()
     crawler.search()
-    log.debug(crawler.flags)
+    for f in crawler.flags:
+        print f[0]
     crawler.httpConn.close()
-
-
-if __name__ == '__main__':
-    main()
