@@ -10,6 +10,7 @@ import httpClient
 from HTMLParser import HTMLParser
 from urlparse import urlparse
 
+# debug level logger
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
@@ -24,14 +25,6 @@ ch.setFormatter(formatter)
 log.addHandler(fh)
 log.addHandler(ch)
 
-# default_host = 'cs5700f16.ccs.neu.edu'
-# default_connect = 'keep-alive'
-# default_agent = 'Mozilla/5.0 (X11; Fedora; Linux x86_64) '\
-#         'AppleWebKit/537.36 (KHTML, like Gecko) '\
-#         'Chrome/52.0.2743.116 Safari/537.36'
-# default_accept = 'text/html,application/xhtml+xml,'\
-#         'application/xml;q=0.9,*/*;q=0.8'
-# default_lang = 'en-US,en;q=0.5'
 login_url = '/accounts/login/?next=/fakebook/'
 
 OK = 0
@@ -39,16 +32,18 @@ RETRY = -1
 
 
 class LinkParser(HTMLParser):
+    """subclass of HTMLParser, used for extracting outlinks"""
     def __init__(self):
         self.reset()
-        self.urls = set([])
+        self.urls = set([]) # found URLs are saved into this Set
 
     def handle_starttag(self, tag, attrs):
         if tag == 'a':
             for attr in attrs:
                 if attr[0] == 'href':
                     self.urls.add(attr[1])
-                    break
+                    break # an 'a' tag may have multiple attrs, break once we
+                          # find the href attr 
 
 
 class Crawler:
@@ -159,26 +154,12 @@ class Crawler:
         return OK
 
     def searchURL(self, cont):
-        # TODO
         htmlParser = LinkParser()
         htmlParser.feed(cont)
         htmlParser.close()
         return htmlParser.urls
 
-        # while True:
-        #     link = cont.find('a href')
-        #     if link == -1:
-        #         break
-        #     start = cont.find('"', link)
-        #     end = cont.find('"', start+1)
-        #     url = cont[start+1: end]
-        #     urls.append(url)
-        #     cont = cont[end:]
-        # return urls
-
     def validURL(self, url):
-        # if 'http://cs5700f16.ccs.neu.edu' in url:
-        #    return url[url.find('.edu')+4:]
         if url[0] == '/':
             return url
         o = urlparse(url)
@@ -200,9 +181,7 @@ class Crawler:
         # GET login page
         r = httpClient.Request('GET', login_url)
         r.add_header('Host', self.hostname)
-        # r.add_header('Connection', 'keep-alive')
         recvMsg = self.httpConn.getResponse(r)
-        # self.getContent(recvMsg)
         self.visited.add(login_url)
 
         # Log in
@@ -212,7 +191,6 @@ class Crawler:
         r = httpClient.Request('POST', '/accounts/login/')
         r.add_header('Host', self.hostname)
         r.add_header('Cookie', '{0}; {1}'.format(csrf.group(0), session.group(0)))
-        # r.add_header('Content-Type', 'application/x-www-form-urlencoded')
         r.add_form(
             {
                 'username': self.username,
@@ -222,7 +200,6 @@ class Crawler:
             })
         r.add_header('Content-length', str(len(r.getContent())))
         recvMsg = self.httpConn.getResponse(r)
-        # self.getContent(recvMsg)
 
         # GET main page and update session cookie
         session = re.search(r'sessionid=([a-zA-Z0-9]+)', recvMsg)
@@ -233,7 +210,6 @@ class Crawler:
         recvMsg = self.httpConn.getResponse(r)
         self.visited.add('/fakebook/')
         self.handleRespMsg(recvMsg, '/fakebook/')
-        # self.getContent(recvMsg)
         return
 
     def search(self):
