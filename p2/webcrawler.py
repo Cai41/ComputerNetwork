@@ -53,20 +53,40 @@ class LinkParser(HTMLParser):
 
 class Crawler:
     def __init__(self, hostname, port, username, password):
+        '''
+        set host name, port, username and password
+        '''
         self.hostname = hostname
         self.port = port
         self.username = username
         self.password = password
+
+        '''
+        queue is for BFS searching the URL
+        visited is used to avoid visiting same page twice
+        flags are all the flas founded
+        '''
         self.queue = Queue.Queue()
         self.visited = set([])
         self.flags = []
+
+        '''
+        lenPattern: regex for looking for the Content-Length field in http header
+        chkPattern: regex for checking whether the http message is using chunked encoding
+        terminalPattern: in the chunked encoding, message is ended by '0\r\n\r\n'
+        chunkPattern: regex for looking for each chunk in chunked encoding
+        flagPattern: regex for looking for each flag
+        redirectPattern: regex for looking for redirect URL when returned 301
+        '''
         self.lenPattern = re.compile(r'Content-Length: ([0-9]+)')
         self.chkPattern = re.compile(r'Transfer-Encoding: chunked')
         self.terminalPattern = re.compile(r'0\r\n\r\n')
         self.chunkPattern = re.compile(r'([0-9a-f]+)\r\n(.+)\r\n([0-9a-f]+)\r\n', re.DOTALL)
         self.flagPattern = re.compile(r'<h2 class=\'secret_flag\' style=\"color:red\">FLAG: ([0-9a-zA-Z]+)</h2>')
         self.redirectPattern = re.compile(r'Location: (.+)\r\n')
-
+        '''
+        http connection specified by the hostname
+        '''
         self.httpConn = httpClient.HttpConn(self.hostname)
 
     # return the content of message
