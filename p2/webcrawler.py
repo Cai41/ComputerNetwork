@@ -52,9 +52,14 @@ class Crawler:
         self.port = port
         self.username = username
         self.password = password
+        # frontier of the crawler, URLs to be visited next
         self.queue = Queue.Queue()
+        
+        # save visited URL in this Set so that no duplicates, quick lookup
         self.visited = set([])
-        self.flags = []
+        self.flags = [] # found flags
+
+        # regular expression patterns 
         self.lenPattern = re.compile(r'Content-Length: ([0-9]+)')
         self.chkPattern = re.compile(r'Transfer-Encoding: chunked')
         self.terminalPattern = re.compile(r'0\r\n\r\n')
@@ -62,14 +67,22 @@ class Crawler:
         self.flagPattern = re.compile(r'<h2 class=\'secret_flag\' style=\"color:red\">FLAG: ([0-9a-zA-Z]+)</h2>')
         self.redirectPattern = re.compile(r'Location: (.+)\r\n')
 
+        # create socket connection using HttpConn class defined in httpClient.py
         self.httpConn = httpClient.HttpConn(self.hostname)
 
-    # return the content of message
     def getContent(self, recvMsg):
+        """
+        Args: 
+        recvMsg: String -- received message from socket
+        Return:
+        String -- content of the message
+        """
+
         length = self.lenPattern.search(recvMsg)
         chunked = self.chkPattern.search(recvMsg)
         contentPos = recvMsg.find('\r\n\r\n')
         content = ''
+        # deal with chunked message
         if chunked is not None and contentPos != -1:
             m = self.chunkPattern.search(recvMsg, contentPos)
             while m is not None:
@@ -82,10 +95,11 @@ class Crawler:
         return content
 
     def handleRespMsg(self, recvMsg, currentUrl):
+        # first line is status line
         statusLine = recvMsg[:recvMsg.find('\r\n')]
         statusFields = statusLine.split()
         try:
-            code = int(statusFields[1])
+            code = int(statusFields[1]) # status code
         except:
             log.debug('This is impossible..')
             return OK
@@ -94,15 +108,18 @@ class Crawler:
             return self.handle200(recvMsg, currentUrl)
         elif code == 302:
             # TODO
+            # not required by the project, occurs if login seesion expires,
+            # relogin
             log.debug('FOUND')
             return OK
         elif code == 301:
             log.debug('MOVED')
+            # find redirected URL
             redirect = self.redirectPattern.search(recvMsg)
             url = redirect.group(1)
             vurl = self.validURL(url)
+            # make sure this URL is valid and not visited, then add it to queue
             if vurl is not None and vurl not in self.visited:
-                self.visited.add(vurl)
                 self.queue.put(vurl)
             return OK
         elif code == 403 or code == 404:
@@ -124,7 +141,6 @@ class Crawler:
         for url in urls:
             vurl = self.validURL(url)
             if vurl is not None and vurl not in self.visited:
-                self.visited.add(vurl)
                 self.queue.put(vurl)
         f = self.flagPattern.search(cont)
         if f is not None:
@@ -140,6 +156,10 @@ class Crawler:
         return htmlParser.urls
 
     def validURL(self, url):
+        """
+        check if URL is on the the website cs5700f16.ccs.neu.edu
+        either starts with '/' or host name is cs5700f16.ccs.neu.edu
+        """
         if url[0] == '/':
             return url
         o = urlparse(url)
@@ -158,6 +178,7 @@ class Crawler:
             recvMsg = self.httpConn.getResponse(r)
 
     def login(self):
+        """ login to Fakebook"""
         # GET login page
         r = httpClient.Request('GET', login_url)
         r.add_header('Host', self.hostname)
@@ -198,6 +219,7 @@ class Crawler:
             log.debug(url)
             self.wrapProcessURL(url)
             log.debug(self.flags)
+            self.visited.add(url)
             
 
 def main():
