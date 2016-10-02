@@ -228,6 +228,8 @@ class Crawler:
         return
 
     def search(self):
+        # while queue is not empty or we still need to look for more flogs,
+        # dequq, visit(process) and mark as visited
         while not self.queue.empty() and len(self.flags) < 5:
             url = self.queue.get()
             log.debug(url)

@@ -2,6 +2,7 @@ import socket
 import re
 import logging
 
+
 OK = 0
 INCOMPLETE = -1
 CORRUPT = -2
@@ -9,6 +10,9 @@ CORRUPT = -2
 log = logging.getLogger(__name__)
 
 class HttpConn():
+    """
+    Send request and receive message
+    """
     def __init__(self, hostname):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.port = 80
@@ -65,6 +69,7 @@ class HttpConn():
         return ''
 
     def reconnect(self, recvMsg):
+        # reconnect if connection is closed
         if 'Connection: close' in recvMsg:
             self.sock.close()
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -106,6 +111,9 @@ class HttpConn():
 
 
 class Request():
+    """
+    build request message
+    """
     def __init__(self, method, uri, version='HTTP/1.1'):
         if method not in ['OPTIONS', 'GET', 'POST', 'HEAD', 'PUT',
                           'DELETE', 'TRACE', 'CONNECT']:
