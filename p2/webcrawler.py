@@ -231,6 +231,8 @@ class Crawler:
         while not self.queue.empty() and len(self.flags) < 5:
             url = self.queue.get()
             log.debug(url)
+            if url in self.visited:
+                continue
             self.wrapProcessURL(url)
             log.debug(self.flags)
             self.visited.add(url)
