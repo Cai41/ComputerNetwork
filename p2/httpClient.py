@@ -28,6 +28,7 @@ class HttpConn():
             return
 
     def _sendReq(self, r):
+        # Try sending the request, if failed, throw exception and return false.
         try:
             self.sock.send(r.getAll())
             return True
@@ -36,6 +37,7 @@ class HttpConn():
             return False
 
     def _recv(self, timeout=2.0):
+        # Try receiving the message within the timeout. If no message is received, throw exception and return None.
         recvMsg = None
         self.sock.settimeout(timeout)
         try:
@@ -48,13 +50,17 @@ class HttpConn():
     # Checks whether the message is complete, if not, keep receiving
     def getResponse(self, req, times=3):
         log.debug(req.getAll())
+        # Try three times to get reponse from request in the argument. If we have tried three times and still no reponse, then give up and return empty string
         for x in xrange(times):
+            # If sending or receving request fails, try again.
             if not self._sendReq(req):
                 continue
             recvMsg = self._recv(4096)
             if recvMsg is None:
                 continue
-            
+
+            # Check whether the message is complete, if not, keep receiving and reassmble them.
+            # If there is any error while receiving messages, break and try again.
             res = self.isComplete(recvMsg, req)
             while res != OK:
                 buf = self._recv(4096)
@@ -62,6 +68,7 @@ class HttpConn():
                     break
                 recvMsg += buf
                 res = self.isComplete(recvMsg, req)
+            # Server might sometimes close the connection so we need to reconnect them.
             self.reconnect(recvMsg)
             if res == OK:
                 log.debug(recvMsg)
@@ -93,17 +100,20 @@ class HttpConn():
             log.error('Can not parse code, err: {}'.format(e))
             return CORRUPT
 
+        # In these situations, the content of message is empty so we only need header.
         if req.fields['method'] == 'HEAD' or code == 204 or code == 304 or 100 <= code < 200:
             return OK
+        # It is chunked encoding, so '0\r\n\r\n' will be the last chunk.
         if chunked is not None:
             return OK if self.terminalPattern.search(recvMsg) is not None else INCOMPLETE
+        # Return if we have received enough data according the Content-Length header field.
         elif length is not None:
             if length.group(1) == 0:
                 return OK
             content = recvMsg.find('\r\n\r\n')
             return OK if content != -1 and len(recvMsg[content+4:]) == int(length.group(1)) else INCOMPLETE
         else:
-            # Retry? Throw exception?
+            # Illegal http message, so ignore this message.
             return CORRUPT
 
     def close(self):
@@ -123,19 +133,23 @@ class Request():
         self.reqContent = ''
         self.fields = {'method': method, 'uri': uri, 'version': version}
 
+    # Add one header field ro the request.
     def add_header(self, key, val):
         self.fields[key] = val
         self.reqHeader = self.reqHeader+key+': '+val+'\r\n'
 
+    # Add content to the request.
     def add_content(self, content):
         self.reqContent = self.reqContent+content
 
     def repl(self, s):
         return '%'+format(ord(s.group()), 'X')
 
+    # We have to encode the content if we are submitting form in the POST request.
     def urlencode(self, s):
         return re.sub(r'[^a-zA-Z0-9]', self.repl, s)
 
+    # Add form to the POST request.
     def add_form(self, dict):
         form = ''
         for k in dict:
@@ -147,8 +161,10 @@ class Request():
                 form = form + key + '=' + value
         self.add_content(form)
 
+    # Return Content from the request(exclude header).
     def getContent(self):
         return self.reqContent
 
+    # Return all information of the request including both header and content.
     def getAll(self):
         return self.reqHeader+'\r\n'+self.reqContent+'\r\n'

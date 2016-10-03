@@ -12,7 +12,7 @@ from urlparse import urlparse
 
 # debug level logger
 log = logging.getLogger()
-log.setLevel(logging.ERROR)
+log.setLevel(logging.CRITICAL)
 
 ch = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:\n'

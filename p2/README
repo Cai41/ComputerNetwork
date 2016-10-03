@@ -1,4 +1,24 @@
-./webcrawler 000076357 AQB4QUSJ
+1.High-level approach:
+(1).httpClient.py has HttpConn class and Request class.
+HttpConn class is built above raw socket and running at http level. HttpConn is responsible for connecting to port 80 at given host, sending http request and receiving http messages in this project, wrapping the socket that receives and sends packet.
+Request class is responsible for building the http request message, by adding header information and content to be sent. Calling Request.getAll() returns the whole message as single string.
+(2).webcrawler.py has LinkParser class and Crawler class.
+LinkParser is used to extract all the urls from web page.
+Crawler class is used to login and craw the fakebook. Crawler first get the login page, send a post request with password and username to login fakebook, retreive the main page and add it to the queue. Then
+crawler begin to breadth-first search for flags by polling a url from BFS queue, retrieve the page using HttpCOnn class, extracting all urls from that page and add unvisited urls to queue. Once all five flags
+are found, the program terminates.
+
+2.Challenge:
+(1). To Build http connection from raw rocket, we need to handle all http message header to get all the information we need such as cookies, response code, content length and son on
+(2). Http messages might be separated to few fragments, so we have to detect which fragment is the last and reassmble them to build the complete message.
+(2). Sometimes http message uses chunked transfer-encoding, reassmble and retreive content from chunked transfer-encoding is not trival.
+
+3.Test:
+We use logs to save all information we need such as content of the message, reponse code, transfer-encoding, length of the messages and so on. Most problems can be solved by locating errors in logs and looking
+up the details of the HTTP protocol.
+
+4. Result:
+Running: ./webcrawler 000076357 AQB4QUSJ
 flags and corresponding uri:
 ('408756e80a91f534ec12b5bb734bcb72d74192c9b51c08fd0466e099cf721c69', '/fakebook/893845631/'),
 ('d21aca410dd8a42d943c46d43a0fc2642abbb9a60f66f3362076691a76d1a9ac', '/fakebook/184922392/'),
@@ -6,7 +26,7 @@ flags and corresponding uri:
 ('569167f09a89c971316feb5c28d566eca3e14c96acf5a3da8046654e13745a99', '/fakebook/574400039/'),
 ('0f8113137ab4400c70e1d3b869cea0d7772200814acd952b7baae5fd57dbc9c1', '/fakebook/993948504/').
 
-./webcrawler 001632759 CKUYKVPY
+Running: ./webcrawler 001632759 CKUYKVPY
 flags and corresponding uri:
 ('d29c6836f0c840ff70cdcdf09ea85ad18ce236b90fa5030aee6dbfaf7e30d238', '/fakebook/6569312/'),
 ('66cd31b794bd9c611e1c4601163b596d7ec2c6321340809fd112c9fd5ba3ddcb', '/fakebook/146821492/'),
