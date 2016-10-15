@@ -22,7 +22,7 @@ CBR source at N2 and sink at N3, one single TCP stream from N1 to N4.
 Do experiments for each combination of the following:
 - CBR from 1 to 10 Mbps 
 - TCP variants Tahoe, Reno, NewReno and Vegas.
-- different package size
+- different start time
 - different random seed
 
 For each setup, run the experiment 100 times and take the average
@@ -39,14 +39,11 @@ Do experiments for each combination of the following:
 - Each pair of TCP variants(one of Reno/Reno, NewReno/Reno, Vegas/Vegas,
 NewReno/Vegas), 
 - CBR from 1 to 10Mbps.
-- different package size
+- different start time
 - different random seed
-
-
 
 Compute throughput, latency and droprate by using Python to analyze the
 trace of NS2 and plot average for runs of the same configuration.
-
 
 
 Experiment 3:
