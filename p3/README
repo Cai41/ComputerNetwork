@@ -19,20 +19,20 @@ Experiment 1:
 
 CBR source at N2 and sink at N3, one single TCP stream from N1 to N4.
 
-Do experiments for each combination of the following:
+Do experiments for each combination of the following, each runs 10 times:
 - CBR from 1 to 10 Mbps 
 - TCP variants Tahoe, Reno, NewReno and Vegas.
 - different delay of each link
 - different random seed
-- different probability of lossing packet on the link
+- different packet size
 
 For each setup, run the experiment 100 times and take the average
 after computing throughput, latency and droprate by using Python to analyze the
 trace of NS2. Observe the different behaviour of each protocol under same
-circumstances, and whether the error probability/delay/random seed would
+circumstances, and whether the packet size/delay/random seed would
 influence their behaviours. If delay of each link has obvious effect on the result,
-fast re-transmission may be the reason. If different error probability on
-the link has an effect, so selective ack might be the reason.
+fast re-transmission may be the reason. If average result of two protocol is defferent by more than
+10% under different situations, then it would be statistically significant result.
 
 
 Experiment 2:
@@ -40,7 +40,7 @@ Experiment 2:
 CBR source at N2 and sink at N3, one TCP stream from N1 to N4 using one TCP
 variant and another TCP stream from N5 to N6 using another TCP variant.
 
-Do experiments for each combination of the following:
+Do experiments for each combination of the following, each runs 10 times:
 - Each pair of TCP variants(one of Reno/Reno, NewReno/Reno, Vegas/Vegas,
 NewReno/Vegas), 
 - CBR from 1 to 10Mbps.
@@ -50,7 +50,8 @@ NewReno/Vegas),
 Compute throughput, latency and droprate by using Python to analyze the
 trace of NS2 and plot average for runs of the same configuration. If the results
 vary under different start time, it should be that AIMD algorithm is effecting on fairness.
-
+If the defference between two protocol is more than 10% under different situations, then it would be
+the statistically significant result.
 
 Experiment 3:
 
@@ -61,8 +62,8 @@ seconds, introduce CBR from N2 to N3. Repeat the experiment for different CBR
 bandwidths.
 
 Compute throughput, latency and droprate by using Python to analyze the
-trace of NS2 and plot average for runs of the same configuration.
-
+trace of NS2 and plot average for runs of the same configuration. It would be statistically significant
+result if difference is more than 10%.
 
 Other details:
 
