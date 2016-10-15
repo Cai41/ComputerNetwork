@@ -29,7 +29,7 @@ Do experiments for each combination of the following:
 For each setup, run the experiment 100 times and take the average
 after computing throughput, latency and droprate by using Python to analyze the
 trace of NS2. Observe the different behaviour of each protocol under same
-circumstances, and whether the packet size/delay/random seed would
+circumstances, and whether the error probability/delay/random seed would
 influence their behaviours. If delay of each link has obvious effect on the result,
 fast re-transmission may be the reason. If different error probability on
 the link has an effect, so selective ack might be the reason.
