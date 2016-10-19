@@ -1,3 +1,5 @@
+set tcpType [lindex $argv 0]
+set rate [lindex $argv 1]
 #Create a simulator object
 set ns [new Simulator]
 
@@ -7,7 +9,7 @@ $ns trace-all $tf
 
 #Define a 'finish' procedure
 proc finish {} {
-    global ns nf tf
+    global ns tf
     $ns flush-trace
     #Close the trace file
     close $tf
@@ -29,18 +31,18 @@ $ns duplex-link $n3 $n4 10Mb 10ms DropTail
 $ns duplex-link $n2 $n5 10Mb 10ms DropTail
 $ns duplex-link $n3 $n6 10Mb 10ms DropTail
 
-$ns queue-limit $n2 $n3 10
+$ns queue-limit $n2 $n3 50
 
 #Setup a TCP connection
-#Agent/TCP/FullTcp/Tahoe, Agent/TCP/Reno,Agent/TCP/FullTcp/Newreno,Agent/TCP/Vegas
-set tcp [new Agent/TCP/Reno]
-$tcp set class_ 2
+#Agent/TCP, Agent/TCP/Reno,Agent/TCP/Newreno,Agent/TCP/Vegas
+set tcp [new $tcpType]
+# $tcp set class_ 2
 $ns attach-agent $n1 $tcp
 set sink [new Agent/TCPSink]
 $ns attach-agent $n4 $sink
 $ns connect $tcp $sink
 $tcp set fid_ 1
-$tcp set window_ 50
+$tcp set window_ 200
 $tcp set packetSize_ 1000
 
 #Setup a FTP over TCP connection
@@ -61,34 +63,20 @@ set cbr [new Application/Traffic/CBR]
 $cbr attach-agent $udp
 $cbr set type_ CBR
 $cbr set packet_size_ 1000
-$cbr set rate_ 10mb
-$cbr set random_ 1
+$cbr set rate_ $rate
+$cbr set random_ 2
 
 #Schedule events for the CBR and FTP agents
-$ns at 0.1 "$cbr start"
+$ns at 0.5 "$cbr start"
 $ns at 1.0 "$ftp start"
-$ns at 4.0 "$ftp stop"
-$ns at 4.5 "$cbr stop"
+$ns at 5.0 "$ftp stop"
+$ns at 6.0 "$cbr stop"
 
 #Detach tcp and sink agents (not really necessary)
-$ns at 4.5 "$ns detach-agent $n1 $tcp ; $ns detach-agent $n3 $sink"
+$ns at 6.0 "$ns detach-agent $n1 $tcp ; $ns detach-agent $n3 $sink"
 
 #Call the finish procedure after 5 seconds of simulation time
-$ns at 5.0 "finish"
-
-proc plotWindow {tcpSource outfile} {
-    global ns
-
-    set now [$ns now]
-    set cwnd [$tcpSource set window_]
-
-    ###Print TIME CWND   for  gnuplot to plot progressing on CWND
-    puts  $outfile  "$now $cwnd"
-
-    $ns at [expr $now+0.1] "plotWindow $tcpSource  $outfile"
-}
-
-$ns  at  0.0  "plotWindow $tcp stdout"
+$ns at 6.0 "finish"
 
 #Run the simulation
 $ns run
