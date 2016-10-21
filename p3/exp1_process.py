@@ -1,9 +1,11 @@
 from subprocess import call
 import matplotlib.pyplot as plt
+import os
 
 TCPType = {'Tahoe':'Agent/TCP', 'Reno':'Agent/TCP/Reno', 'Newreno':'Agent/TCP/Newreno', 'Vegas':'Agent/TCP/Vegas'}
 
 def statistic(fname, duration):
+    # Open and read the trace file
     with open(fname) as f:
         lines = f.readlines()
     sendTime = {}
@@ -11,6 +13,9 @@ def statistic(fname, duration):
     recv = 0
     triptime = 0
     size = 0
+    # For each line, split into serveral fields.
+    # If the packet is sent by node 0, then send++, and record the sendtime
+    # If the packet is received by node 3, the recv++, and calculate the triptime, sum the packet size
     for l in lines:
         fields = l.split()
         if fields[0] == '+' and fields[2] == '0':
@@ -30,23 +35,27 @@ def statistic(fname, duration):
 
 def runExp1(cbr_start, cbr_end, step):
     stat = {'thpt':{}, 'drop':{}, 'lat':{}}
+    # Do experiment on each TCP variant
     for typeName in TCPType:
         throughput = []
         drop = []
         latency = []
+        # Change the cbr rate from cbr_start*step to cbr_end*step
         for i in range(cbr_start, cbr_end):
             print typeName + ': ' + str(i*step) + 'mb'
             fname = 'exp1_{0}_{1}.tr'.format(typeName,str(i*step*10))
             t_sum = 0
             d_sum = 0
             l_sum = 0
+            # Run 5 times, differ the duration and random seed, and get the average result
             for times in range(5):
                 call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
                       str(2.0), str(10.0+times*0.5)])
-                t, d, l = statistic(fname, 10.0)
+                t, d, l = statistic(fname, 10.0+times*0.5-2.0)
                 t_sum += t
                 d_sum += d
                 l_sum += l
+                os.remove(fname)
             throughput.append(t_sum/5)
             drop.append(d_sum/5)
             latency.append(l_sum/5)
@@ -76,7 +85,7 @@ def main():
             plt.ylabel('Latency: s')
         plt.legend()
         # plt.show()
-        plt.savefig(k)
+        plt.savefig('exp1_'+k)
 
 main()
 
