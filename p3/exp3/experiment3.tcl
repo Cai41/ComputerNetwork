@@ -69,14 +69,14 @@ $udp set fid_ 2
 set cbr [new Application/Traffic/CBR]
 $cbr attach-agent $udp
 $cbr set type_ CBR
-$cbr set rate_ 6Mb
+$cbr set rate_ 8Mb
 $cbr set random_ 1
 $cbr set packetSize_ 1000
 
 #######################################################################################
 
 #Schedule events for the CBR and FTP agents
-$ns at 1.0 "$ftp start"
+$ns at 0.0 "$ftp start"
 $ns at 10.0 "$cbr start"
 $ns at $duration "$cbr stop"
 $ns at $duration "$ftp stop"
