@@ -10,33 +10,41 @@ TestCase = [['Reno', 'Reno'], ['Newreno', 'Reno'], ['Vegas','Vegas'], ['Newreno'
 def statistic(fname, duration):
     with open(fname) as f:
         lines = f.readlines()
-    sendTime1, sendTime2 = {}, {}
+    window1, window2 = {}, {}
     send1, send2 = 0, 0
     recv1, recv2 = 0, 0
-    triptime1, triptime2 = 0, 0
+    total_rtt1, total_rtt2 = 0, 0
     size1, size2 = 0, 0
     for l in lines:
         fields = l.split()
-        if fields[0] == '+' and fields[2] == '0':
-            sendTime1[fields[11]] = float(fields[1])
+        action = fields[0]
+        time = float(fields[1])
+        source = fields[2]
+        dest = fields[3]
+        packetType = fields[4]
+        seq = fields[10]
+        if action == '+' and source == '0':
+            if seq not in window1:
+                window1[seq] = time
             send1 += 1
-        elif fields[0] == '+' and fields[2] == '4':
-            sendTime2[fields[11]] = float(fields[1])
-            send2 += 1            
-        elif fields[0] == 'r' and fields[3] == '3':
+        elif action == '+' and source == '4':
+            if seq not in window2:
+                window2[seq] = time
+            send2 += 1
+        elif action == 'r' and dest == '0' and packetType == 'ack' and (seq in window1):
             recv1 += 1
-            size1 += int(fields[5])
-            triptime1 += (float(fields[1]) - sendTime1[fields[11]])
-        elif fields[0] == 'r' and fields[3] == '5':
+            total_rtt1 += time - window1[seq]
+            window1.pop(seq)
+        elif action == 'r' and dest == '4' and packetType == 'ack' and (seq in window2):
             recv2 += 1
-            size2 += int(fields[5])
-            triptime2 += (float(fields[1]) - sendTime2[fields[11]])            
-    throughput1 = size1*8.0/duration/1024
+            total_rtt2 += time - window2[seq]
+            window2.pop(seq)
+    throughput1 = recv1 * 1040 * 8.0 / duration / 1024
     drop1 = (send1-recv1)*1.0/send1*100
-    latency1 = triptime1*1.0/recv1
-    throughput2 = size2*8.0/duration/1024
+    latency1 = total_rtt1*1.0/recv1
+    throughput2 = recv2 * 1040 * 8.0 / duration / 1024
     drop2 = (send2-recv2)*1.0/send2*100
-    latency2 = triptime2*1.0/recv2    
+    latency2 = total_rtt2*1.0/recv2
     return throughput1, drop1, latency1, throughput2, drop2, latency2
 
 def runExp1(cbr_start, cbr_end, step):
@@ -52,27 +60,17 @@ def runExp1(cbr_start, cbr_end, step):
             print typeName1 + ': ' + str(i*step) + 'mb'
             print typeName2 + ': ' + str(i*step) + 'mb'
             fname = 'exp2_{0}_{1}_{2}.tr'.format(typeName1, typeName2, str(i*step*10))
-            t_sum1, t_sum2 = 0, 0
-            d_sum1, d_sum2 = 0, 0
-            l_sum1, l_sum2 = 0, 0
-            times = 3
-            for t in range(times):
-                call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname,
-                      str(2.0), str(10.0+t*1.0)])
-                t1, d1, l1, t2, d2, l2 = statistic(fname, 10.0+t*1.0-2.0)
-                t_sum1 += t1
-                d_sum1 += d1
-                l_sum1 += l1
-                t_sum2 += t2
-                d_sum2 += d2
-                l_sum2 += l2
-                os.remove(fname)
-            throughput1.append(t_sum1/times)
-            drop1.append(d_sum1/times)
-            latency1.append(l_sum1/times)
-            throughput2.append(t_sum2/times)
-            drop2.append(d_sum2/times)
-            latency2.append(l_sum2/times)            
+            #call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname,
+            #      str(2.0), str(10.0+t*1.0)])
+            call(["ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname,
+                  str(2.0), str(10.0)])
+            t1, d1, l1, t2, d2, l2 = statistic(fname, 8.0)
+            throughput1.append(t1)
+            drop1.append(d1)
+            latency1.append(l1)
+            throughput2.append(t2)
+            drop2.append(d2)
+            latency2.append(l2)            
         stat1['thpt'].append(throughput1)
         stat1['drop'].append(drop1)
         stat1['lat'].append(latency1)
