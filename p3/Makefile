@@ -3,3 +3,6 @@ default:
 
 exp1:
 	python exp1/run_exp1.py
+
+clean:
+	rm exp*/*.tr

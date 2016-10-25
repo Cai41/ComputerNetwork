@@ -1,3 +1,5 @@
+import matplotlib as mpl
+mpl.use('Agg')
 from subprocess import call
 import matplotlib.pyplot as plt
 import os
