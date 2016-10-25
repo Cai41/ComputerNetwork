@@ -1,3 +1,5 @@
+import matplotlib as mpl
+mpl.use('Agg')
 from subprocess import call
 import matplotlib.pyplot as plt
 import os
@@ -47,11 +49,11 @@ def runExp1(cbr_start, cbr_end, step):
             t_sum = 0
             d_sum = 0
             l_sum = 0
-            # Run 5 times, differ the duration and random seed, and get the average result
-            for times in range(5):
+            # Run 5 times, vary the start time, and get the average result
+            for j in range(1):
                 call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
-                      str(2.0), str(10.0+times*0.5)])
-                t, d, l = statistic(fname, 10.0+times*0.5-2.0)
+                      str(2.0+0.01*j), str(10.0+j*0.01)])
+                t, d, l = statistic(fname, 10.0)
                 t_sum += t
                 d_sum += d
                 l_sum += l

@@ -1,3 +1,4 @@
+# parameters: TCP type, CBR rate, trace file path, start time, end time
 set tcpType [lindex $argv 0]
 set rate [lindex $argv 1]
 set fpath [lindex $argv 2]
