@@ -75,7 +75,7 @@ def main():
     cbr_start = 1
     cbr_end = 21
     step = 0.5
-    color = {'Tahoe':'--o', 'Reno':'--^', 'Newreno':'--s', 'Vegas':'--*'}
+    color = {'Tahoe':'-o', 'Reno':'-^', 'Newreno':'-s', 'Vegas':'-*'}
     stat = runExp1(cbr_start, cbr_end, step)
     nfig = 0
     for k in stat:

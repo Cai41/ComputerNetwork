@@ -61,7 +61,7 @@ def runExp1(duration):
     return stat
 
 def main():
-    color = {'SACK_DropTail':'--o', 'SACK_RED':'--^', 'Reno_DropTail':'--s', 'Reno_RED':'--*'}
+    color = {'SACK_DropTail':'-o', 'SACK_RED':'-^', 'Reno_DropTail':'-s', 'Reno_RED':'-*'}
     duration = 30
     stat = runExp1(duration)
     nfig = 0
