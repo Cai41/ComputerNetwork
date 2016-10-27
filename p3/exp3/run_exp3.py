@@ -20,6 +20,7 @@ def statistic(fname, duration):
     drop = []
     for i in range(duration):
         send[i] = recv[i] = total_rtt[i] = 0
+        send[i+0.5] = recv[i+0.5] = total_rtt[i+0.5] = 0
     for l in lines:
         fields = l.split()
         action = fields[0]
@@ -29,12 +30,15 @@ def statistic(fname, duration):
         packetType = fields[4]
         seq = fields[10]
 
+        time_int = int(time)
+        if time - time_int > 0.5:
+            timeSlot = time_int + 0.5
+        else:
+            timeSlot = time_int
         if action == '+' and source == '0':
-            timeSlot = int(float(time))
             window[seq] = time
             send[timeSlot] += 1
         elif action == 'r' and dest == '0' and packetType == 'ack' and seq in window:
-            timeSlot = int(float(fields[1]))
             recv[timeSlot] += 1
             total_rtt[timeSlot] += time - window[seq]
             window.pop(seq)
