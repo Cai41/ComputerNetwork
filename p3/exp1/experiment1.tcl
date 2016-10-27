@@ -4,6 +4,7 @@ set rate [lindex $argv 1]
 set fpath [lindex $argv 2]
 set start [lindex $argv 3]
 set end [lindex $argv 4]
+set packetSize [lindex $argv 5]
 
 #Create a simulator object
 set ns [new Simulator]
@@ -42,7 +43,7 @@ $ns attach-agent $n1 $tcp
 set sink [new Agent/TCPSink]
 $ns attach-agent $n4 $sink
 $ns connect $tcp $sink
-$tcp set packetSize_ 1000
+$tcp set packetSize_ $packetSize 
 $tcp set fid_ 1
 
 #Setup a FTP over TCP connection

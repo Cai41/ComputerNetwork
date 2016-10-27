@@ -24,8 +24,7 @@ def statistic(fname, duration):
         packetType = fields[4]
         seq = fields[10]
         if action == '+' and source == '0':
-            if seq not in window1:
-                window1[seq] = time
+            window1[seq] = time
             send1 += 1
         elif action == '+' and source == '4':
             if seq not in window2:

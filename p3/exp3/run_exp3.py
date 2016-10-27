@@ -31,8 +31,7 @@ def statistic(fname, duration):
 
         if action == '+' and source == '0':
             timeSlot = int(float(time))
-            if seq not in window:
-                window[seq] = time
+            window[seq] = time
             send[timeSlot] += 1
         elif action == 'r' and dest == '0' and packetType == 'ack' and seq in window:
             timeSlot = int(float(fields[1]))
