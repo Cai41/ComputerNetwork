@@ -34,11 +34,12 @@ $ns duplex-link $n3 $n4 10Mb 10ms $queue
 $ns duplex-link $n2 $n5 10Mb 10ms $queue
 $ns duplex-link $n3 $n6 10Mb 10ms $queue
 
-$ns queue-limit $n1 $n2 30
-$ns queue-limit $n2 $n3 30
-$ns queue-limit $n3 $n4 30
-$ns queue-limit $n2 $n5 30
-$ns queue-limit $n3 $n6 30
+Queue set limit_ 10
+# $ns queue-limit $n1 $n2 30
+# $ns queue-limit $n2 $n3 30
+# $ns queue-limit $n3 $n4 30
+# $ns queue-limit $n2 $n5 30
+# $ns queue-limit $n3 $n6 30
 ###########################################################################################
 
 #Setup a TCP connection: Agent/TCP/SACK, Agent/TCP/Reno
