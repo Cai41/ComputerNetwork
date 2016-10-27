@@ -40,8 +40,8 @@ def statistic(fname, duration):
             window.pop(seq)
     for i in range(duration):
         thpt.append(recv[i]*1040*8.0/1024)
-        latency.append(total_rtt[i]*1.0/recv[i] if recv[i] != 0 else 0)
-        drop.append((send[i]-recv[i])*1.0/send[i]*100 if send[i] != 0 else 0)
+        latency.append(total_rtt[i]*1.0/recv[i] if recv[i] != 0 else 0.35)
+        drop.append((send[i]-recv[i])*1.0/send[i]*100 if send[i] != 0 else 1)
     return thpt, latency, drop
 
 def runExp1(duration):
