@@ -62,7 +62,10 @@ def runExp1(cbr_start, cbr_end, step):
             else:
                 call(["ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
                     str(2.0), str(10.0), str(1000)])
-            t, d, l = statistic(fname, 8.0, 1000)
+            if typeName == "Agent/TCP/Vegas":
+                t, d, l = statistic(fname, 8.0, 1040)
+            else:
+                t, d, l = statistic(fname, 8.0, 1000)
             throughput.append(t)
             drop.append(d)
             latency.append(l)
