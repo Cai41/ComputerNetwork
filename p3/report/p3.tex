@@ -30,7 +30,7 @@ In this paper we conduct simulation-based experiments to analyze performance of 
 \section{Introduction}
 There are many TCP variants and many of them are implemented in some systems. In this paper we simulate Tahoe, Reno, New Reno and Vegas, compare their performances under congestion, as well as when they co-exit with other TCP variants (as in the real world). Also we explore the benefits of introducing SACK (selective acknowledgements)  and how well SACK works with RED and DropTail queueing disciplines.
 
-As a quick review, we highlight some features we are interested in for each of the TCP variant\cite{sim}:
+As a quick review, we highlight some features we are interested in for each of the TCP variant \cite{sim}:
 
 TCP Tahoe: \textit{Fast Retransmit}, after receiving a small number of duplicate acknowledgements for the same TCP segments (dup ACKs), the data sender infers that a packet has been lost and retransmits the packet without waiting for a retransmission timer to expire, leading to higher channel utilization and connection throughput.
 
@@ -121,12 +121,7 @@ To show that this is a statistically significant result, (i.e., it is the differ
 \end{itemize}
 
 \textbf{t-test}
-An interesting fact is that for CBR between 8 and 9.5Mbps, latency of Tahoe/Reno/NewReno don't change that much compared to when CBR changes from 7.5 to 8Mbps.
-An interesting fact is that for CBR between 8 and 9.5Mbps, latency of Tahoe/Reno/NewReno don't change that much compared to when CBR changes from 7.5 to 8Mbps.
-An interesting fact is that for CBR between 8 and 9.5Mbps, latency of Tahoe/Reno/NewReno don't change that much compared to when CBR changes from 7.5 to 8Mbps.
-An interesting fact is that for CBR between 8 and 9.5Mbps, latency of Tahoe/Reno/NewReno don't change that much compared to when CBR changes from 7.5 to 8Mbps.
 
-An interesting fact is that for CBR between 8 and 9.5Mbps, latency of Tahoe/Reno/NewReno don't change that much compared to when CBR changes from 7.5 to 8Mbps.
 
 \subsection{Experiment 2: Fairness Between TCP Variants}
 
@@ -150,8 +145,38 @@ New Reno/Vegas),
 \end{center}
 \end{figure}
 
-By comparing the drop-rate , throughput and latency of the two TCP streams,  we can see that their performances are very similar, so Reno is fair to itself. 
-Fig.\ref{exp2_Reno_Reno_thpt} shows throughputs of the two TCP Reno streams.
+\begin{figure}[!ht]
+\begin{center}
+\includegraphics[width=\linewidth]{../exp2/exp2_Reno_Reno_lat.png}
+\caption{Latency of Reno/Reno under different CBR rates}
+\label{exp2_Reno_Reno_lat}
+\end{center}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{center}
+\includegraphics[width=\linewidth]{../exp2/exp2_Reno_Reno_drop.png}
+\caption{Drop-rates of Reno/Reno under different CBR rates}
+\label{exp2_Reno_Reno_drop}
+\end{center}
+\end{figure}
+
+
+By comparing the drop-rate, throughput and latency of the two TCP streams in Fig. \ref{exp2_Reno_Reno_thpt}, \label{exp2_Reno_Reno_lat} and \label{exp2_Reno_Reno_drop}, we find that, very surprisingly, \textbf{Reno is not fair to itself}, when the available bandwidth is around the steam's normal throughput. We would have expected Reno is fair to itself as the two streams are using the same TCP variant with the same implementation. 
+
+As have been discussed in \cite{reno}, ``TCP Reno induces packet losses to estimate the available bandwidth in the network. While there
+are no packet losses, TCP Reno continues to increase its window size by one during each round
+trip time. When it experiences a packet loss, it reduces its window size to one half of the current
+window size. This is called additive increase and multiplicative decrease. Such
+an algorithm leads to a fair allocation of bandwidth. TCP Reno, however, fails to achieve such
+fairness because TCP is not a synchronized rate based control scheme, which is necessary for the
+convergence.
+
+The rate at which each connection updates its window size depends on the round trip delay of
+the connection. Hence, the connections with shorter delays can update their window sizes faster
+than other connections with longer delays, and thereby steal an unfair share of the bandwidth. As
+a result, TCP Reno exhibits an undesirable bias against the connections with longer delays.'' Therefore, it's easy for one TCP Reno connection to become dominant over the other one, as shown in the figures.
+
 
 %New Reno/Reno
 \subsubsection{New Reno/Reno}
@@ -170,7 +195,7 @@ Fig.\ref{exp2_Reno_Reno_thpt} shows throughputs of the two TCP Reno streams.
 \end{center}
 \end{figure}
 %Why?
-Fig.\ref{exp2_NewReno_Reno_thpt} and Fig.\ref{exp2_NewReno_Reno_lat} shows throughput and latency of the two TCP NewReno streams. 
+Fig. \ref{exp2_NewReno_Reno_thpt} and Fig. \ref{exp2_NewReno_Reno_lat} shows throughput and latency of the two TCP NewReno streams. 
 
 It's clear that New Reno is not fair to Reno. New Reno is getting more throughput and maintains lower latency when congestion level gets high. The reason for this is that, as stated in previous section and \cite{sim}, New Reno eliminates Reno's wait for a retransmit timer when multiple packets are lost from a window. So when multiple packets are lost, Reno will wait for a timeout before try to retransmit but New Reno will retransmit immediately, which helps New Reno to get lower latency and transmit more throughput.
 
@@ -185,12 +210,13 @@ It's clear that New Reno is not fair to Reno. New Reno is getting more throughpu
 \label{exp2_Vegas_Vegas_thpt}
 \end{center}
 \end{figure}
-This case is similar to what we saw with Reno/Reno, Vegas is fair to itself, as shown in Fig.\ref{exp2_Vegas_Vegas_thpt}.
+Vegas is fair to itself, as shown in Fig. \ref{exp2_Vegas_Vegas_thpt}. This is because unlike TCP Reno, Vegas'
+window sizes converge to a point such that the queue sizes are within the same range for both connections, as shown in \cite{reno}.
 %New Reno/Vegas
 \subsubsection{New Reno/Vegas}
 
 
-Performance of Vegas degrades because Vegas reduces its sending rate before New Reno, as it detects congestion early and hence gives greater bandwidth to co-existing TCP Reno flows.
+Performance of Vegas degrades because Vegas reduces its sending rate before New Reno, as it detects congestion early and hence gives greater bandwidth to co-existing TCP Reno flows. Also, New Reno inherits Reno's aggressive nature and is even more aggressive.
 \begin{figure}[!h]
 \begin{center}
 \includegraphics[width=\linewidth]{../exp2/exp2_Newreno_Vegas_thpt.png}
@@ -206,23 +232,25 @@ Performance of Vegas degrades because Vegas reduces its sending rate before New 
 
 \subsubsection{Configuration}
 
-For each queueing algorithm DropTail and RED:
-
-Use TCP Reno and SACK to create two TCP flows N1 to N4 and N5 to N6, after 5 
-seconds, introduce CBR from N2 to N3. Repeat the experiment for different CBR 
-bandwidths.
+For this experiment we want to study the influence of the queuing discipline used by nodes on the overall throughput of flows. We noticed with our choice of size of queue (10 in this experiment), the throughput of TCP connections is about 3Mbps. So we set the bandwidth available on the links to be 3Mbps, run a TCP stream from N1 to N4 and start a UDP stream at 3Mbps from N2 to N3 when TCP connection becomes stable (after about 10s to be safe) and see how RED and DropTail distribute bandwidth for 20 seconds.
 
 \subsubsection{Results Analysis}
 
-\begin{figure}[htbp]
+To compute how throughput, latency and drop-rate change over time, we split the duration into 30 segments, 1s each. For each segment we compute the stats separately and plot the graph using these 30 data points. On Fig. \ref{exp3_lat} and \ref{exp3_drop} there are many data points missing, which is because Reno and SACK cannot transmit any packet with DropTail, we can interpret those as 100\% drop-rate and infinite latency.
+
+When CBR flow is introduced, TCP flows start dropping most packet and throughput drops to near 0.
+
+It's not surprising to see that with RED, both SACK and Reno are getting some share of the bandwidth as RED is designed for congestion avoidance. They didn't get half the bandwidth mainly because TCP is slower compared to UDP by nature. But compare to DropTail, where SACK and Reno could barely send any packet, RED is fair.
+
+\begin{figure}[!ht]
 \begin{center}
-\includegraphics[width=\linewidth]{../exp3/exp3_drop.png}
-\caption{Drop rate of TCP variants with different queueing algorithm}
-\label{exp3_drop}
+\includegraphics[width=\linewidth]{../exp3/exp3_thpt.png}
+\caption{Throughput of TCP variants with different queueing algorithm}
+\label{exp3_thpt}
 \end{center}
 \end{figure}
 
-\begin{figure}[htbp]
+\begin{figure}[!ht]
 \begin{center}
 \includegraphics[width=\linewidth]{../exp3/exp3_lat.png}
 \caption{Latency of TCP variants with different queueing algorithm}
@@ -230,23 +258,27 @@ bandwidths.
 \end{center}
 \end{figure}
 
-\begin{figure}[htbp]
+\begin{figure}[!ht]
 \begin{center}
-\includegraphics[width=\linewidth]{../exp3/exp3_thpt.png}
-\caption{Throughput of TCP variants with different queueing algorithm}
-\label{exp3_thpt}
+\includegraphics[width=\linewidth]{../exp3/exp3_drop.png}
+\caption{Drop-rate of TCP variants with different queueing algorithm}
+\label{exp3_drop}
 \end{center}
 \end{figure}
+
+
 \section{Conclusion}
+We explored the performance and fairness of TCP variants Tahoe, Reno, New Reno and Vegas, and influence of RED and DropTail algorithm on TCP Reno and SACK. TCP Vegas overall performs better than other variants and is fair to other connections, but variants like TCP Reno/TCP New Reno steal an unfair share of bandwidth from other connections (including TCP Vegas). RED is designed for congestion avoidance and does try to give each connection a fair share of bandwidth. As shown in \cite{reno}, RED gateways could be used to make TCP Vegas more compatible with TCP Reno in a competitive environment. In conclusion, we agree with \cite{vegas_red}, switching from Reno to Vegas will improve overall performance and these results lead us to believe that many would benefit from more widespread adoption of TCP Vegas and RED.
 
 \begin{thebibliography}{50}
 \bibitem{sim} Fall, Kevin, and Sally Floyd. ``Simulation-based comparisons of Tahoe, Reno and SACK TCP.''\textit{ACM SIGCOMM Computer Communication Review}
  26.3 (1996): 5-21.
  \bibitem{vegas}  \url{https://en.wikipedia.org/wiki/TCP_Vegas}
  \bibitem{vegas_red} Weigle, Eric, and Wu-chun Feng. ``A case for TCP Vegas in high-performance computational grids.'' 
- \textit{High Performance Distributed Computing, 2001. Proceedings. 10th IEEE International Symposium on}. IEEE, 2001. \bibitem{sim} Fall, Kevin, and Sally Floyd. "Simulation-based comparisons of Tahoe, Reno and SACK TCP." \textit{ACM SIGCOMM Computer Communication Review}
- 26.3 (1996): 5-21.
-
+ \textit{High Performance Distributed Computing, 2001. Proceedings. 10th IEEE International Symposium on}. IEEE, 2001. 
+ \bibitem{reno} Mo, Jeonghoon, et al. ``Analysis and comparison of TCP Reno and Vegas.'' 
+ \textit{IEEE INFOCOM. Vol. 3. INSTITUTE OF ELECTRICAL ENGINEERS INC} (IEEE), 1999.
+ \bibitem{red} Floyd, Sally, and Van Jacobson. ``Random early detection gateways for congestion avoidance.'' \textit{IEEE/ACM Transactions on networking} 1.4 (1993): 397-413.
 \end{thebibliography}
 
 
