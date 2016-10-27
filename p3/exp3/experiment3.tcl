@@ -28,11 +28,11 @@ set n5 [$ns node]
 set n6 [$ns node]
 
 #Create links between the nodes
-$ns duplex-link $n1 $n2 10Mb 10ms $queue
-$ns duplex-link $n2 $n3 10Mb 10ms $queue
-$ns duplex-link $n3 $n4 10Mb 10ms $queue
-$ns duplex-link $n2 $n5 10Mb 10ms $queue
-$ns duplex-link $n3 $n6 10Mb 10ms $queue
+$ns duplex-link $n1 $n2 3Mb 10ms $queue
+$ns duplex-link $n2 $n3 3Mb 10ms $queue
+$ns duplex-link $n3 $n4 3Mb 10ms $queue
+$ns duplex-link $n2 $n5 3Mb 10ms $queue
+$ns duplex-link $n3 $n6 3Mb 10ms $queue
 
 Queue set limit_ 10
 # $ns queue-limit $n1 $n2 30
@@ -70,7 +70,7 @@ $udp set fid_ 2
 set cbr [new Application/Traffic/CBR]
 $cbr attach-agent $udp
 $cbr set type_ CBR
-$cbr set rate_ 7.5Mb
+$cbr set rate_ 3Mb
 $cbr set random_ 1
 $cbr set packetSize_ 1000
 
