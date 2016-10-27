@@ -20,7 +20,6 @@ def statistic(fname, duration):
     drop = []
     for i in range(duration):
         send[i] = recv[i] = total_rtt[i] = 0
-        send[i+0.5] = recv[i+0.5] = total_rtt[i+0.5] = 0
     for l in lines:
         fields = l.split()
         action = fields[0]
@@ -30,25 +29,19 @@ def statistic(fname, duration):
         packetType = fields[4]
         seq = fields[10]
 
-        time_int = int(time)
-        if time - time_int > 0.5:
-            timeSlot = time_int + 0.5
-        else:
-            timeSlot = time_int
         if action == '+' and source == '0':
+            timeSlot = int(float(time))
             window[seq] = time
             send[timeSlot] += 1
         elif action == 'r' and dest == '0' and packetType == 'ack' and seq in window:
+            timeSlot = int(float(fields[1]))
             recv[timeSlot] += 1
             total_rtt[timeSlot] += time - window[seq]
             window.pop(seq)
     for i in range(duration):
         thpt.append(recv[i]*1040*8.0/1024)
-        thpt.append(recv[i+0.5]*1040*8.0/1024)
         latency.append(total_rtt[i]*1.0/recv[i] if recv[i] != 0 else 0)
-        latency.append(total_rtt[i+0.5]*1.0/recv[i+0.5] if recv[i+0.5] != 0 else 0)
         drop.append((send[i]-recv[i])*1.0/send[i]*100 if send[i] != 0 else 0)
-        drop.append((send[i+0.5]-recv[i+0.5])*1.0/send[i+0.5]*100 if send[i+0.5] != 0 else 0)
     return thpt, latency, drop
 
 def runExp1(duration):
@@ -74,10 +67,8 @@ def main():
     for k in stat:
         plt.figure(nfig)
         nfig += 1
-        x = range(2*duration)
-        x = [i/2.0 for i in x]
         for combination in stat[k]:
-            plt.plot(x, stat[k][combination], color[combination], label = combination)
+            plt.plot(range(duration), stat[k][combination], color[combination], label = combination)
         plt.xlabel('Time: seconds')
         if k == 'thpt':
             plt.ylabel('Throughpt: kbps')
@@ -90,4 +81,3 @@ def main():
         plt.savefig('exp3_'+k)
 
 main()
-
