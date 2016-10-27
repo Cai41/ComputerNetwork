@@ -69,7 +69,7 @@ $udp set fid_ 2
 set cbr [new Application/Traffic/CBR]
 $cbr attach-agent $udp
 $cbr set type_ CBR
-$cbr set rate_ 8Mb
+$cbr set rate_ 7Mb
 $cbr set random_ 1
 $cbr set packetSize_ 1000
 
