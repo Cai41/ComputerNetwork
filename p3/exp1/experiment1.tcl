@@ -5,6 +5,7 @@ set fpath [lindex $argv 2]
 set start [lindex $argv 3]
 set end [lindex $argv 4]
 set packetSize [lindex $argv 5]
+set randomSeed [lindex $argv 6]
 
 #Create a simulator object
 set ns [new Simulator]
@@ -79,7 +80,7 @@ $ns at $end "$ns detach-agent $n1 $tcp ; $ns detach-agent $n4 $sink"
 #Call the finish procedure after 5 seconds of simulation time
 $ns at 16.0 "finish"
 
-$defaultRNG seed 0
+$defaultRNG seed $randomSeed
 
 #Run the simulation
 $ns run
