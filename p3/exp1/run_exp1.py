@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import os
 import numpy
 
-DEV = True
-# TEST = False
-TEST = True 
+DEV = False 
+TEST = False
+# TEST = True 
 
 TCPType = {'Tahoe':'Agent/TCP', 'Reno':'Agent/TCP/Reno', 'Newreno':'Agent/TCP/Newreno', 'Vegas':'Agent/TCP/Vegas'}
 

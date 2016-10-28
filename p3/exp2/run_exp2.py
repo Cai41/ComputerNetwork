@@ -4,6 +4,8 @@ from subprocess import call
 import matplotlib.pyplot as plt
 import os
 
+DEV = False 
+
 TCPType = {'Tahoe':'Agent/TCP', 'Reno':'Agent/TCP/Reno', 'Newreno':'Agent/TCP/Newreno', 'Vegas':'Agent/TCP/Vegas'}
 TestCase = [['Reno', 'Reno'], ['Newreno', 'Reno'], ['Vegas','Vegas'], ['Newreno','Vegas']]
 
@@ -59,10 +61,10 @@ def runExp1(cbr_start, cbr_end, step):
             print typeName1 + ': ' + str(i*step) + 'mb'
             print typeName2 + ': ' + str(i*step) + 'mb'
             fname = 'exp2_{0}_{1}_{2}.tr'.format(typeName1, typeName2, str(i*step*10))
-            #call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname,
-            #      str(2.0), str(10.0+t*1.0)])
-            call(["ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname,
-                  str(2.0), str(10.0)])
+            if not DEV:
+                call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname, str(2.0), str(10.0)])
+            else:
+                call(["ns", "experiment2.tcl", TCPType[typeName1], TCPType[typeName2], str(i*step), fname, str(2.0), str(10.0)])
             t1, d1, l1, t2, d2, l2 = statistic(fname, 8.0)
             throughput1.append(t1)
             drop1.append(d1)

@@ -51,8 +51,8 @@ def runExp1(duration):
         # For each queue type
         for queueName in QueueType:
             fname = 'exp3_{0}_{1}.tr'.format(typeName, queueName)
-            call(["ns", "experiment3.tcl", TCPType[typeName], queueName, fname, str(duration)])
-            #call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment3.tcl", TCPType[typeName], queueName, fname, str(duration)])
+            #call(["ns", "experiment3.tcl", TCPType[typeName], queueName, fname, str(duration)])
+            call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment3.tcl", TCPType[typeName], queueName, fname, str(duration)])
             t, l, d = statistic(fname, duration)
             stat['thpt'][typeName+'_'+queueName] = t
             stat['lat'][typeName+'_'+queueName] = l

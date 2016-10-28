@@ -1,0 +1,25 @@
+=== Experiments ===
+
+Run experiments by:
+
+make
+./experiments
+
+This will generate all the trace files and plots in folders exp1, exp2, exp3.
+
+=== Report ===
+
+Written in LaTeX using template IEEEtrans.
+
+TeX file: p3.tex
+PDF file: p3.pdf
+
+=== Approach ===
+
+See report.
+
+=== Challenges ===
+
+- Define proper formulas to compute throughput, drop-rate and latency.
+- Explain results by refering to a couple of papers.
+- Find a good configuration to compare RED and DropTail
