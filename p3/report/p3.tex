@@ -117,10 +117,71 @@ To show that this is a statistically significant result, (i.e., it is the differ
 
 \begin{itemize}
 \item start time of the TCP stream
-\item packet size
+\item random seed
 \end{itemize}
 
-\textbf{t-test}
+\textbf{Statistical Significance}
+
+\textit{Latency}
+ For latency, as an example, compare Vegas and Reno fix CBR at 6Mbps, vary start time to be 2.0, 2.2, 2.4, 2.5 and random seed to be 0, 1, 2.
+We get 12 samples with statistics as in Table. \ref{lat}
+
+\begin{table}[h]
+\caption{Latency statistics}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+Group &	  Vegas  &	  Reno \\
+\hline
+Mean	& 0.06301225003001062000000 &	0.06312073751688091000000\\
+SD &	0.00001533243815282286700	&0.00001377394390645781400\\
+SEM &	0.00000442609364743278600&	0.00000397619511109811260\\
+N &	12                 &        	12       \\                  
+\end{tabular}
+\end{center}
+\label{lat}
+\end{table}%
+
+Confidence interval: 
+  The mean of Vegas minus Reno equals -0.00010848748687028453000 
+  
+  95\% confidence interval of this difference: 
+  \[[-0.00012082666951555674000, -0.00009614830422501233000]\]
+  
+$P$ value and statistical significance: 
+  The two-tailed $P$ value is less than 0.0001, which is considered to be extremely statistically significant. 
+
+\textit{Throughput}
+ For throughput, as an example, compare Vegas and Tahoe fix CBR at 7Mbps, vary start time to be 2.0, 2.2, 2.4, 2.5 and random seed to be 0, 1, 2.
+We get 12 samples with statistics as in Table. \ref{thpt}
+
+\begin{table}[h]
+\caption{Throughput statistics}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+Group &	  Vegas  &	  Tahoe \\
+\hline
+Mean &	2347.135131122070000000&	2387.278768837157000000\\
+SD &	2.949309467095722500&	2.108560077216230000\\
+SEM	&0.851392307375613600&	0.608688864091644200\\
+N	&12 &                   	12                    
+\end{tabular}
+\end{center}
+\label{thpt}
+\end{table}%
+
+  Confidence interval: 
+  The mean of Vegas minus Tahoe equals -40.143637715086700000 
+  
+  95\% confidence interval of this difference:
+\[[-42.314152391520440000, -37.973123038652960000]\]
+  
+  
+$P$ value and statistical significance: 
+  The two-tailed $P$ value is less than 0.0001, which is considered to be extremely statistically significant. 
+
+
+
+
 
 
 \subsection{Experiment 2: Fairness Between TCP Variants}
