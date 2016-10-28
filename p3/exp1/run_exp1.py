@@ -7,7 +7,7 @@ import numpy
 
 DEV = True
 # TEST = False
-TEST = False 
+TEST = True 
 
 TCPType = {'Tahoe':'Agent/TCP', 'Reno':'Agent/TCP/Reno', 'Newreno':'Agent/TCP/Newreno', 'Vegas':'Agent/TCP/Vegas'}
 
@@ -58,10 +58,10 @@ def runExp1(cbr_start, cbr_end, step):
             # Run 5 times, vary the start time, and get the average result
             if not DEV:
                 call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
-                    str(2.0), str(10.0), str(1000)])
+                    str(2.0), str(10.0), str(1000), str(0)])
             else:
                 call(["ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
-                    str(2.0), str(10.0), str(1000)])
+                    str(2.0), str(10.0), str(1000), str(0)])
             if typeName == "Agent/TCP/Vegas":
                 t, d, l = statistic(fname, 8.0, 1040)
             else:
@@ -87,16 +87,16 @@ def gen_stats(cbr_start, cbr_end, step):
             d = []
             l = []
             for time in [2.0, 2.2, 2.4, 2.5]:
-                for ps in [1000]:
+                for seed in [0, 1, 2]:
                     print typeName + ': ' + str(i*step) + 'mb'
-                    fname = 'exp1_{0}_{1}_{2}_{3}.tr'.format(typeName, str(i*step), time, ps)
+                    fname = 'exp1_{0}_{1}_{2}_{3}.tr'.format(typeName, str(i*step), time, seed)
                     if not DEV:
                         call(["/course/cs4700f12/ns-allinone-2.35/bin/ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
-                            str(time), str(10.0), str(ps)])
+                            str(time), str(10.0), str(1000), str(seed)])
                     else:
                         call(["ns", "experiment1.tcl", TCPType[typeName], str(i*step), fname,
-                            str(time), str(10.0), str(ps)])
-                    tt, dd, ll = statistic(fname, 10.0 - time, ps)
+                            str(time), str(10.0), str(1000), str(seed)])
+                    tt, dd, ll = statistic(fname, 10.0 - time, 1000)
                     t.append(tt)
                     d.append(dd)
                     l.append(ll)
