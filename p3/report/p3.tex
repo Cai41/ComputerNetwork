@@ -38,7 +38,7 @@ TCP Reno: \textit{Fast Recovery}, prevents the communication path from going emp
 
 TCP New Reno: The New-Reno TCP in this paper includes a small change to the Reno algorithm at the sender that eliminates Reno's wait for a retransmit timer when multiple packets are lost from a window. \cite{sim}
 
-Vegas TCP: TCP Vegas is a TCP congestion avoidance algorithm that emphasizes packet delay, rather than packet loss, as a signal to help determine the rate at which to send packets. TCP Vegas detects congestion at an incipient stage based on increasing Round-Trip Time (RTT) values of the packets in the connection unlike other flavors such as Reno, New Reno, etc., which detect congestion only after it has actually happened via packet loss. The algorithm depends heavily on accurate calculation of the Base RTT value. If it is too small then throughput of the connection will be less than the bandwidth available while if the value is too large then it will overrun the connection.
+TCP Vegas: TCP Vegas is a TCP congestion avoidance algorithm that emphasizes packet delay, rather than packet loss, as a signal to help determine the rate at which to send packets. TCP Vegas detects congestion at an incipient stage based on increasing Round-Trip Time (RTT) values of the packets in the connection unlike other flavors such as Reno, New Reno, etc., which detect congestion only after it has actually happened via packet loss. The algorithm depends heavily on accurate calculation of the Base RTT value. If it is too small then throughput of the connection will be less than the bandwidth available while if the value is too large then it will overrun the connection.
 %
 %A lot of research is going on regarding the fairness provided by the linear increase/decrease mechanism for congestion control in Vegas. 
 
@@ -113,7 +113,7 @@ Fig. \ref{exp1_drop}, Fig. \ref{exp1_lat} and Fig. \ref{exp1_thpt} show the drop
 
 We can see that when CBR rate is lower than 7Mbps, all TCP variants performs almost the same except Vegas has slightly lower throughput. When congestion becomes more and more severe, TCP Vegas starts to stand out while all others remain having similar performance. TCP Vegas has significantly lower drop-rate and level of latency and throughput is higher. So overall, TCP Vegas is better except that even when congestion level is low it already slows down slightly as it can detect congestion earlier than others\cite{vegas}.
 
-To show that this is a statistically significant result, (i.e., it is the different implementations of TCP variants that is causing the difference in their average latency and drop-rate, instead of other parameters and random noise,) we run the simulation for each CBR rate for 10 times, each time we simulate with different values for the parameters
+To show that this is a statistically significant result, (i.e., it is the different implementations of TCP variants that are causing the difference in their average latency and drop-rate, instead of other parameters and random noise,) we run the simulation for each CBR rate for 10 times, each time we simulate with different values for the parameters
 
 \begin{itemize}
 \item start time of the TCP stream
@@ -124,6 +124,7 @@ To show that this is a statistically significant result, (i.e., it is the differ
 
 
 \subsection{Experiment 2: Fairness Between TCP Variants}
+\subsubsection{Configuration}
 
 In this experiment, we want to analyze fairness between TCP variants. To do so, we set up a CBR source at N2 and sink at N3 and a UDP stream between them. We start one TCP stream from N1 to N4 using one TCP
 variant and another TCP stream from N5 to N6 using another TCP variant.
@@ -162,7 +163,7 @@ New Reno/Vegas),
 \end{figure}
 
 
-By comparing the drop-rate, throughput and latency of the two TCP streams in Fig. \ref{exp2_Reno_Reno_thpt}, \label{exp2_Reno_Reno_lat} and \label{exp2_Reno_Reno_drop}, we find that, very surprisingly, \textbf{Reno is not fair to itself}, when the available bandwidth is around the steam's normal throughput. We would have expected Reno is fair to itself as the two streams are using the same TCP variant with the same implementation. 
+By comparing the drop-rate, throughput and latency of the two TCP streams in Fig. \ref{exp2_Reno_Reno_thpt}, \ref{exp2_Reno_Reno_lat} and \ref{exp2_Reno_Reno_drop}, we find that, very surprisingly, \textbf{Reno is not fair to itself}, when the available bandwidth is around the steam's normal throughput. We would have expected Reno is fair to itself as the two streams are using the same TCP variant with the same implementation. 
 
 As have been discussed in \cite{reno}, ``TCP Reno induces packet losses to estimate the available bandwidth in the network. While there
 are no packet losses, TCP Reno continues to increase its window size by one during each round
