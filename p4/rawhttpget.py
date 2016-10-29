@@ -15,7 +15,7 @@ def parseURL(url):
         path += 'index.html'        
     return u.netloc, path
 
-if struct.pack("H",1) == "\x00\x01":
+if pack("H",1) == "\x00\x01":
     # big endian
     def checksum(msg):
         if len(msg) % 2 == 1:
