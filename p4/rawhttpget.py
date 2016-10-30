@@ -1,8 +1,11 @@
 import argparse
 import urlparse
 import random
+import socket
 from struct import pack, unpack
 
+file_header_fmt = ['majic', 'version_major', 'version_minor', 'zone', 'max_len', 'time_stap', 'link_type']
+cap_header_fmt = ['gmt_time', 'micro_time', 'pcap_len', 'len']
 ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
 
@@ -15,7 +18,7 @@ def parseURL(url):
         path += 'index.html'        
     return u.netloc, path
 
-if struct.pack("H",1) == "\x00\x01":
+if pack("H",1) == "\x00\x01":
     # big endian
     def checksum(msg):
         if len(msg) % 2 == 1:
@@ -45,7 +48,7 @@ class rawSocket():
         self.cwnd = 1
         self.ipversion = 4
         self.dip = socket.gethostbyname(host)
-        self.sip = getsourceip()
+        self.sip = self.getsourceip()
 
     def getsourceip(self): 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -72,21 +75,20 @@ class rawSocket():
                     header['cksum'], header['saddr'], header['daddr'])
 
     def getIPHeader(self, packet):
-    	ip_head = unpack('!BBHHHBBHII', packet[:20])
-    	ip_head_dict = dict(zip(ip_header_fmt, ip_head))
-        ip_head_length = (ip_head_dict['ver_ihl'] & 0xF) * 4
+    	ip_header = unpack('!BBHHHBBHII', packet[:20])
+    	ip_header_dict = dict(zip(ip_header_fmt, ip_header))
+        return ip_header_dict
 
     def getTCPHeader(self, seg):
-        tcp_head = unpack('!HHLLBBHHH', seg[:20])
-        tcp_head_dict = dict(zip(tcp_header_fmt, tcp_head))
-        offset = tcp_head_dict['offset_res']
-        tcp_head_length = 4*(offset >> 4)
+        tcp_header = unpack('!HHLLBBHHH', seg[:20])
+        tcp_header_dict = dict(zip(tcp_header_fmt, tcp_header))
 
         tcp_length = len(seg)
-        psh = pack('!IIBBH', self.saddr, self.daddr, 0, socket.IPPROTO_TCP, tcp_length)
+        psh = pack('!IIBBH', self.sip, self.dip, 0, socket.IPPROTO_TCP, tcp_length)
         cksum_msg = psh + seg
         if checksum(cksum_msg) != 0:
             print 'cksum fail'
+        return tcp_header_dict
 
     def connect(self):
         tcp_header_size = 5
@@ -116,7 +118,46 @@ if __name__ == '__main__':
 
     host, uri =  parseURL(args.url)
     s = rawSocket(host, uri)
-    print s.httpGet
-    s.connect()
-    s.sendPacket()
-    s.tearDown()
+    
+    # read .cap/.pcap file
+    fcap = open('http.cap', 'rb')
+    text = fcap.read()
+
+    # read cap
+    file_head_len = 24
+    cap_head_len = 16
+    cap_header = unpack('IIII', text[file_head_len : file_head_len + cap_head_len])
+    cap_header_dict = dict(zip(cap_header_fmt, cap_header))
+
+    print cap_header_dict['pcap_len']
+    
+    frame = text[file_head_len + cap_head_len: file_head_len + cap_head_len + cap_header_dict['pcap_len']];
+
+    # parse packet
+    packet = frame[14:]
+    ip_header_dict = s.getIPHeader(packet)
+    ip_header_len = (ip_header_dict['ver_ihl'] & 0xF) * 4
+    source_address = ip_header_dict['saddr']
+    dest_address = ip_header_dict['daddr']
+
+    print 'ip version: ' + str((ip_header_dict['ver_ihl'] & 0xF0) >> 4)
+    print 'ip header len: ' + str(ip_header_len) + ' bytes'
+    print socket.inet_ntoa(pack('!I', source_address))
+    print socket.inet_ntoa(pack('!I', dest_address))
+
+    s.sip = ip_header_dict['saddr']
+    s.dip = ip_header_dict['daddr']
+
+    # parse segment
+    segment = packet[ip_header_len:]
+    tcp_header_dict = s.getTCPHeader(segment)
+    offset_res = tcp_header_dict['offset_res']
+    tcp_header_len = 4*(offset_res >> 4)
+    
+    print 'source port: ' + str(tcp_header_dict['sport'])
+    print 'dest port: ' + str(tcp_header_dict['dport'])
+    print 'window size: ' + str(tcp_header_dict['window'])
+
+    # parse payload
+    payload = segment[tcp_header_len:]
+    print payload
