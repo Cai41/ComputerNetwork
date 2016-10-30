@@ -6,6 +6,7 @@ from struct import pack, unpack
 
 file_header_fmt = ['majic', 'version_major', 'version_minor', 'zone', 'max_len', 'time_stap', 'link_type']
 cap_header_fmt = ['gmt_time', 'micro_time', 'pcap_len', 'len']
+mac_header_fmt = ['smac', 'dmac', 'type']
 ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
 
@@ -47,8 +48,12 @@ class rawSocket():
         self.adwnd = 500
         self.cwnd = 1
         self.ipversion = 4
-        self.dip = socket.gethostbyname(host)
-        self.sip = self.getsourceip()
+        dip = socket.gethostbyname(host)
+        sip = self.getsourceip()
+        print dip
+        print sip
+        self.sip = socket.inet_aton(sip)
+        self.dip = socket.inet_aton(dip)
 
     def getsourceip(self): 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -62,18 +67,24 @@ class rawSocket():
         
         # make a pseudo header and fill the cksum field
         tcp_length = len(tcp_header)+len(payload)
-        psh = pack('!IIBBH', seld.saddr, seld.daddr, 0, socket.IPPROTO_TCP, tcp_length)
-        header['cksum'] = cksum(psh + tcp_header + payload)
-        tcp_header =  pack('!HHLLBBHHH' , header['sport'], header['dport'], header['seq'],
+        psh = pack('!IIBBH', self.sip, self.dip, 0, socket.IPPROTO_TCP, tcp_length)
+        header['cksum'] = checksum(psh + tcp_header + payload)
+        tcp_header =  pack('!HHLLBBH' , header['sport'], header['dport'], header['seq'],
                            header['ack'], header['offset_res'], header['flags'],
-                           header['window'], pack('H', header['cksum']), header['urg'])
-
+                           header['window']) + pack('H', header['cksum']) + pack('!H', header['urg'])
+        return tcp_header
 
     def buildIPHeader(self, header):
-        return pack('!BBHHHBBH4s4s' , header['ver_ihl'], header['tos'], header['tot_len'],
+        return pack('!BBHHHBBHII' , header['ver_ihl'], header['tos'], header['tot_len'],
                     header['id'], header['frag_off'], header['ttl'], header['protocol'],
                     header['cksum'], header['saddr'], header['daddr'])
 
+    def getMACHeader(self, frame):
+        mac_header = unpack('!6s6sH', frame[:14])
+        print mac_header
+        mac_header_dict = dict(zip(mac_header_fmt, mac_header))
+        return mac_header_dict
+    
     def getIPHeader(self, packet):
     	ip_header = unpack('!BBHHHBBHII', packet[:20])
     	ip_header_dict = dict(zip(ip_header_fmt, ip_header))
@@ -109,18 +120,10 @@ class rawSocket():
     
     def tearDown(self):
         return 0
-    
-if __name__ == '__main__':
-    # parse the URL given
-    parser = argparse.ArgumentParser(prog = 'rawHttp')
-    parser.add_argument('url')
-    args = parser.parse_args()
 
-    host, uri =  parseURL(args.url)
-    s = rawSocket(host, uri)
-    
+def testPcapFile(s):
     # read .cap/.pcap file
-    fcap = open('http.cap', 'rb')
+    fcap = open('testpacket.pcap', 'rb')
     text = fcap.read()
 
     # read cap
@@ -129,10 +132,12 @@ if __name__ == '__main__':
     cap_header = unpack('IIII', text[file_head_len : file_head_len + cap_head_len])
     cap_header_dict = dict(zip(cap_header_fmt, cap_header))
 
-    print cap_header_dict['pcap_len']
-    
-    frame = text[file_head_len + cap_head_len: file_head_len + cap_head_len + cap_header_dict['pcap_len']];
+    print 'frame len: ' + str(cap_header_dict['len'])
 
+    # parse frame
+    frame = text[file_head_len + cap_head_len: file_head_len + cap_head_len + cap_header_dict['pcap_len']];
+    mac_header_dict = s.getMACHeader(frame)
+    
     # parse packet
     packet = frame[14:]
     ip_header_dict = s.getIPHeader(packet)
@@ -160,4 +165,31 @@ if __name__ == '__main__':
 
     # parse payload
     payload = segment[tcp_header_len:]
+    print 'payload: '
     print payload
+
+    return mac_header_dict, ip_header_dict, tcp_header_dict, payload
+
+def testBuildPacket(s, machdr, iphdr, tcphdr, payload):
+    # Build tcp header
+    seg = s.buildTCPHeader(tcphdr, payload) + payload
+    pkt = s.buildIPHeader(iphdr) + seg
+    return pkt
+    
+if __name__ == '__main__':
+    # parse the URL given
+    parser = argparse.ArgumentParser(prog = 'rawHttp')
+    parser.add_argument('url')
+    args = parser.parse_args()
+
+    host, uri =  parseURL(args.url)
+    s = rawSocket(host, uri)
+    
+    machdr, iphdr, tcphdr, payload = testPcapFile(s)
+    pkt = testBuildPacket(s, machdr, iphdr, tcphdr, payload)
+
+    # print mac head
+    print ":".join("{:02x}".format(ord(c)) for c in machdr['smac'])
+    print ":".join("{:02x}".format(ord(c)) for c in machdr['dmac'])
+    print format(machdr['type'], '04x')
+    
