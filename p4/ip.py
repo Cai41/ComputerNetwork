@@ -33,18 +33,24 @@ class IP:
         
 
     def send(self, segment, dest_ip):
-        """packet is from layer above, e.g. tcp packet"""
+        """segment is from layer above, e.g. tcp packet"""
         # add header
         
         ip_header_dict = {'ver_ihl': self.ipversion << 4 + 5, 'tos': 0, 'tot_len': 0, 'id': 0,
                           'frag_off': 0, 'ttl': 255, 'protocol': socket.IPPROTO_TCP, 'cksum': 0,
                           'saddr': socket.inet_aton(self.source_ip), 'daddr':
-                          socket.inet_aton (dest_ip)}
+                          dest_ip}
         ip_header = buildTCPHeader(ip_header_dict)
         header = None
         packet = header + segment 
         self.ethernet.send(packet)
 
     def recv(self):
-        # TODO do stuff here, remove header
+        packet = self.ethernet.recv()
+        segment = packet[20:]
+        # TODO do stuff like here, remove header
         return segment 
+
+if __name__ == '__main__':
+    ip = IP()
+    ip.send('', socket.inet_aton('10.0.2.2'))
