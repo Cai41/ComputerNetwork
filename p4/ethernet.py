@@ -24,20 +24,23 @@ class Ethernet:
             sys.exit()
         self.local_mac= self.sock.getsockname()[4]
         self.local_ip = utils.get_local_ip_address('eth0')
-        self.gateway_mac = None
+        self.gateway_mac = utils.BCAST_MAC
 
     def _build_frame_header(self, dest_mac, ptype =
             utils.ETHERNET_PROTOCOL_TYPE_IP):
         frame_header = ''.join([dest_mac, self.local_mac, ptype])
         return frame_header
 
-    def send(self, dest_mac, packet, ptype = utils.ETHERNET_PROTOCOL_TYPE_IP):
+    def send(self, packet, dest_mac = None, ptype = utils.ETHERNET_PROTOCOL_TYPE_IP):
+        """dest_mac, packet, ptype default is IP"""
+        if dest_mac == None:
+            dest_mac = self.gateway_mac
         frame = self._build_frame_header(dest_mac, ptype = ptype) + packet
         self.sock.send(frame)
 
 if __name__ == '__main__':
     ether = Ethernet()
-    ether.send(utils.BCAST_MAC, '')
+    ether.send('')
 
 
         
