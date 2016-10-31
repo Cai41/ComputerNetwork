@@ -1,5 +1,6 @@
 import struct
 import socket
+import fcntl
 
 # constants
 BCAST_MAC = struct.pack('!6B', *(0xFF,)*6)

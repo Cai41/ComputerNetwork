@@ -22,7 +22,7 @@ class Ethernet:
             print 'gateway_ip:', self.gateway_ip
         except:
             sys.exit()
-        self.local_mac= sock.getsockname()[4]
+        self.local_mac= self.sock.getsockname()[4]
         self.local_ip = utils.get_local_ip_address('eth0')
         self.gateway_mac = None
 
