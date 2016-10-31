@@ -31,9 +31,8 @@ class Ethernet:
         frame_header = ''.join([dest_mac, self.local_mac, ptype])
         return frame_header
 
-    def send(self, dest_mac, packet):
-
-        frame = self._build_frame_header(dest_mac) + packet
+    def send(self, dest_mac, packet, ptype = utils.ETHERNET_PROTOCOL_TYPE_IP):
+        frame = self._build_frame_header(dest_mac, ptype = ptype) + packet
         self.sock.send(frame)
 
 if __name__ == '__main__':
