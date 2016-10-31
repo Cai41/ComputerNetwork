@@ -16,7 +16,7 @@ ETHERNET_PROTOCOL_TYPE_ARP = struct.pack('!H', 0x0806)
 ETHERNET_PROTOCOL_TYPE_IP = struct.pack('!H', 0x0800)
 
 def get_default_gateway_linux():
-    """Read the default gateway directly from /proc."""
+    """Human readable gateway IP. Read the default gateway directly from /proc."""
     with open("/proc/net/route") as fh:
         for line in fh:
             fields = line.strip().split()
