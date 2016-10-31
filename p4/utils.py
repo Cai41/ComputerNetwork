@@ -15,6 +15,26 @@ PROTOCOL_TYPE_IP = struct.pack('!H', 0x0800)
 ETHERNET_PROTOCOL_TYPE_ARP = struct.pack('!H', 0x0806)
 ETHERNET_PROTOCOL_TYPE_IP = struct.pack('!H', 0x0800)
 
+if struct.pack("H",1) == "\x01\x00":
+    # big endian
+    def checksum(msg):
+        if len(msg) % 2 == 1:
+            msg += '\0'
+        sum = 0
+        for i in range(0, len(msg), 2):
+            w = (ord(msg[i]) << 8) + ord(msg[i+1])
+            sum = ((sum + w) & 0xffff) + ((sum + w) >> 16)
+        return ~sum & 0xffff
+else:
+    def checksum(msg):
+        if len(msg) % 2 == 1:
+            msg += '\0'
+        sum = 0
+        for i in range(0, len(msg), 2):
+            w = ord(msg[i]) + (ord(msg[i+1]) << 8)
+            sum = ((sum + w) & 0xffff) + ((sum + w) >> 16)
+        return ~sum & 0xffff
+
 def get_default_gateway_linux():
     """Human readable gateway IP. Read the default gateway directly from /proc."""
     with open("/proc/net/route") as fh:
