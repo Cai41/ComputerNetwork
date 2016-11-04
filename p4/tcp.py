@@ -2,6 +2,7 @@
 import argparse
 import urlparse
 import random
+import time
 from socket import *
 from struct import pack, unpack
 
@@ -70,6 +71,8 @@ class TCP:
     def __init__(self, host, url):
         self.rsock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)
         self.ssock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)
+        self.uri = uri
+        self.host = host
         self.seq = random.randint(0, (1 << 32) - 1)
         self.ack = 0
         self.sport = random.randint(5000, (1 << 16) - 1)
@@ -184,20 +187,23 @@ class TCP:
                 self.LBR = (self.LBR + len(buf)) % MAX_SEQ
                 return buf
             
-    # send payload, called by application
-    def send(payload):
-        condition.acquire()
-        # if buffer reaches window size, sleep
-        while (self.LBS - self.LAR + MAX_SEQ) % MAX_SEQ>= min(self.max_recv_buffer, self.adwnd)
-            condition.wait()
-        self.squeue[self.LBS+1] = buffer
-        self.LBS += len(buffer)
-        pkt_dict = _default_hdr()
-        condition.release()
-        self.sock.send(self._build_tcp_hdr(pkt_dict, buffer) + buffer)
-        self.seq = (self.seq + len(payload)) % (1 << 32 - 1)
-
     '''
+    
+    # send payload, called by application
+    def send(self, payload):
+        # condition.acquire()
+        # if buffer reaches window size, sleep
+        # while (self.LBS - self.LAR + MAX_SEQ) % MAX_SEQ>= min(self.max_recv_buffer, self.adwnd)
+            # condition.wait()
+        pkt_dict = self._default_hdr()
+        pkt_dict['flags'] = (1 << 3) + (1 << 4)
+        tcp_hdr = self._build_tcp_hdr(pkt_dict, payload)
+        self.squeue[self.LBS+1] = (payload, pkt_dict, time.time())
+        self.LBS += len(payload)
+        # condition.release()
+        print payload
+        self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + tcp_hdr + payload, (inet_ntoa(pack('!L', self.dip)), 0))
+        self.seq = (self.seq + len(payload)) % (1 << 32 - 1)
     
     # send ack
     def send_ack(self):
@@ -226,6 +232,7 @@ class TCP:
     def handshake(self):
         self.send_syn()
         self.recv_syn_ack()
+        self.seq += 1
         self.send_ack()
 
 if __name__ == '__main__':
@@ -237,3 +244,4 @@ if __name__ == '__main__':
     
     tcp = TCP(host, uri)
     tcp.handshake()
+    tcp.send('GET {} HTTP/1.1\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
