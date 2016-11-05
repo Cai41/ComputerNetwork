@@ -153,7 +153,7 @@ class TCP:
     # TODO: add a timeout
     def recv(self, max = 1000):
         while True:
-            p = self.rsock.recv(10240)
+            p = self.rsock.recv(4096)
             iphdr, p = getIPHeader(p)
             hdr, payload = self._strip_tcp_hdr(p)
             if hdr['sport'] != self.dport or hdr['dport'] != self.sport:
@@ -217,6 +217,8 @@ class TCP:
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 1
         self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + self._build_tcp_hdr(pkt_dict, ''), (inet_ntoa(pack('!L', self.dip)), 0))
+        self.seq += 1
+        self.LBS = self.seq - 1
 
     # recv syn&ack, only called by handshake
     def recv_syn_ack(self):
@@ -229,16 +231,12 @@ class TCP:
                 self.NBE = self.ack
                 self.LBR = self.ack - 1
                 self.LAR = hdr['ack']
-                self.LBS = self.seq
                 self.dest_advwnd = hdr['window']
                 return
         
     def handshake(self):
         self.send_syn()
         self.recv_syn_ack()
-        
-        self.seq += 1
-        self.LBS += 1
         self.send_ack()
 
     def print_info(self):
@@ -260,6 +258,9 @@ if __name__ == '__main__':
     tcp.handshake()
     tcp.print_info()
     tcp.send('GET {} HTTP/1.1\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
-    tcp.print_info()    
-    print tcp.recv()
+    tcp.print_info()
+    data = ''
+    for i in range(3):
+        data += tcp.recv()
+    print data
     tcp.print_info()    
