@@ -73,11 +73,13 @@ class TCP:
         self.ssock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)
         self.uri = uri
         self.host = host
+        # if next packet is to be sent, then its seq should be self.seq
         self.seq = random.randint(0, (1 << 32) - 1)
         self.ack = 0
         self.sport = random.randint(5000, (1 << 16) - 1)
         self.dport = 80
         self.cwnd = 1
+        self.dest_advwnd = 0
         self.sip = unpack('!L', inet_aton(getsourceip()))[0]
         self.dip = unpack('!L', inet_aton(gethostbyname(host)))[0]
         print inet_ntoa(pack('!L', self.sip))
@@ -93,11 +95,12 @@ class TCP:
         # recv queue to store all out-of-order packet
         self.rqueue = {}
         # seqno of next byte expected
-        self.NBE = self.ack + 1
+        self.NBE = self.ack
         # seqno of last byte application has read
-        self.LBR = self.ack
+        self.LBR = self.ack - 1
         self.max_recv_buffer = 1000
 
+    # for reciever
     def _advertised_wnd(self):
         return self.max_recv_buffer - ((self.NBE-1)-self.LBR)
     
@@ -135,61 +138,60 @@ class TCP:
     def _default_hdr(self):
         tcp_header_dict = {'sport':self.sport, 'dport':self.dport, 'seq':self.seq, 'ack': self.ack,
                            'offset_res': 5 << 4, 'flags': 0,
-                           'window': min(self._advertised_wnd(), self.cwnd),
+                           'window': self._advertised_wnd(),
                            'cksum': 0,
                            'urg': 0}
         return tcp_header_dict
 
-    '''
     # check whether sequence is within window(min <= seq <= max), sequence number might wrap around
-    def _seq_in_window(seq, min, max):
+    def _seq_in_window(self, seq, min, max):
         pos = (seq - min + MAX_SEQ) % MAX_SEQ
         max_pos = (max - min + MAX_SEQ + 1) % MAX_SEQ
         return pos < max_pos
     
-    # called by application
-    def recv(self, maxsize = 500):
+    # recv one packet starting from NBE, if out of order then buffer and waiting for NBE to come
+    # TODO: add a timeout
+    def recv(self, max = 1000):
         while True:
-            p = self.sock.recv()
-            hdr, payload = _strip_tcp_hdr(p)
+            p = self.rsock.recv(10240)
+            iphdr, p = getIPHeader(p)
+            hdr, payload = self._strip_tcp_hdr(p)
             if hdr['sport'] != self.dport or hdr['dport'] != self.sport:
                 continue
             # if it is ack
             if hdr['flags'] & ACK:
-                lar = self.LAR
-                lbs = self.LBS
                 # if it is within the send window
                 if self._seq_in_window(hdr['ack'], self.LAR + 1, self.LBS + 1):
-                    self.condition.acquire()
+                    # self.condition.acquire()
                     self.LAR = hdr['ack']
                     filter_queue = {k: v for k, v in self.squeue.iteritems() if k < hdr['ack']}
                     self.squeue = filter_queue
-                    self.condition.notify()
-                    self.condition.release()
+                    # self.condition.notify()
+                    # self.condition.release()
 
             if len(payload) != 0:
                 if hdr['seq'] == self.NBE:
                     self.recv_data += payload
                     self.NBE = (self.NBE + len(payload)) % MAX_SEQ
-                    while self.rqueue[self.NBE] != None:
+                    while self.NBE in self.rqueue:
                         self.recv_data += self.rqueue[self.NBE]
                         self.NBE = (self.NBE + len(rqueue[self.NBE])) % MAX_SEQ
                         self.rqueue.pop([self.NBE])
                     # send ack, which equals to self.NBE
-                    send_ack(self.NBE)
+                    self.ack = self.NBE
+                    self.send_ack()
                 elif self._seq_in_window(hdr['seq'], (self.NBE + 1) % MAX_SEQ, (self.LBR + self.max_recv_buffer) % MAX_SEQ):
                     self.rqueue[hdr['seq']] = payload
 
-            if self.NBE != self.LBR + 1:
-                size = (self.NBE + MAX_SEQ - self.LBR) % MAX_SEQ
-                buf = data[:min(size, max_size)]
-                data = data[min(size, max_size):]
-                self.LBR = (self.LBR + len(buf)) % MAX_SEQ
-                return buf
-            
-    '''
+            if len(self.recv_data) != 0:
+                size = min(max, (self.NBE + MAX_SEQ - self.LBR) % MAX_SEQ)
+                data = self.recv_data[:size]
+                self.recv_data = self.recv_data[size:]                
+                self.LBR = (self.LBR + len(data)) % MAX_SEQ
+                return data
     
     # send payload, called by application
+    # TODO: if dest_advwmd is 0, then keep calling self.recv() until dest_advwnd is not 0
     def send(self, payload):
         # condition.acquire()
         # if buffer reaches window size, sleep
@@ -199,9 +201,8 @@ class TCP:
         pkt_dict['flags'] = (1 << 3) + (1 << 4)
         tcp_hdr = self._build_tcp_hdr(pkt_dict, payload)
         self.squeue[self.LBS+1] = (payload, pkt_dict, time.time())
-        self.LBS += len(payload)
+        self.LBS = (self.LBS + len(payload)) % (1 << 32 - 1)
         # condition.release()
-        print payload
         self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + tcp_hdr + payload, (inet_ntoa(pack('!L', self.dip)), 0))
         self.seq = (self.seq + len(payload)) % (1 << 32 - 1)
     
@@ -209,32 +210,45 @@ class TCP:
     def send_ack(self):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 4
-        print pkt_dict
         self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + self._build_tcp_hdr(pkt_dict, ''), (inet_ntoa(pack('!L', self.dip)), 0))
-    
+
+    # send syn
     def send_syn(self):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 1
-        print pkt_dict        
         self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + self._build_tcp_hdr(pkt_dict, ''), (inet_ntoa(pack('!L', self.dip)), 0))
 
+    # recv syn&ack, only called by handshake
     def recv_syn_ack(self):
         while True:
             p = self.rsock.recv(4096)
             iphdr, p = getIPHeader(p)
-            print iphdr
             hdr, payload = self._strip_tcp_hdr(p)
-            print hdr
             if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
-                break
-        self.ack = hdr['seq'] + 1
-    
+                self.ack = hdr['seq'] + 1
+                self.NBE = self.ack
+                self.LBR = self.ack - 1
+                self.LAR = hdr['ack']
+                self.LBS = self.seq
+                self.dest_advwnd = hdr['window']
+                return
+        
     def handshake(self):
         self.send_syn()
         self.recv_syn_ack()
+        
         self.seq += 1
+        self.LBS += 1
         self.send_ack()
 
+    def print_info(self):
+        print 'NBE: ' + str(self.NBE)
+        print 'LBR: ' + str(self.LBR)
+        print 'LAR: ' + str(self.LAR)
+        print 'LBS: ' + str(self.LBS)
+        print 'self.ack: ' + str(self.ack)
+        print 'self.seq: ' + str(self.seq)
+        
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog = 'rawHttp')
     parser.add_argument('url')
@@ -244,4 +258,8 @@ if __name__ == '__main__':
     
     tcp = TCP(host, uri)
     tcp.handshake()
+    tcp.print_info()
     tcp.send('GET {} HTTP/1.1\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
+    tcp.print_info()    
+    print tcp.recv()
+    tcp.print_info()    
