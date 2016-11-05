@@ -99,7 +99,7 @@ class TCP:
         self.NBE = self.ack
         # seqno of last byte application has read, changing when self.recv() is called
         self.LBR = self.ack - 1
-        self.max_recv_buffer = 1000
+        self.max_recv_buffer = 4096
 
     # for reciever
     def _advertised_wnd(self):
@@ -130,7 +130,7 @@ class TCP:
         cksum_msg = psh + seg
         if checksum(cksum_msg) != 0:
             print 'cksum fail'
-            # return None, None
+            return None, None
             
         offset_res = tcp_header_dict['offset_res']
         tcp_header_len = 4*(offset_res >> 4)
@@ -156,12 +156,23 @@ class TCP:
     def recv(self, max = 1000):
         t = time.time()
         while time.time() - t < 3.0:
+            if len(self.recv_data) != 0:
+                size = min(max, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
+                data = self.recv_data[:size]
+                self.recv_data = self.recv_data[size:]                
+                self.LBR = (self.LBR + len(data)) % MAX_SEQ
+                return data
+            
             try:
                 pkt = self.rsock.recv(4096)
             except Exception as e:
                 continue
             iphdr, seg = getIPHeader(pkt)
             hdr, payload = self._strip_tcp_hdr(seg)
+            if hdr is None or payload is None:
+                t = time.time()
+                self.send_ack()
+                continue
             if hdr['sport'] != self.dport or hdr['dport'] != self.sport:
                 continue
             # if it is ack
@@ -178,21 +189,15 @@ class TCP:
                     self.recv_data += payload
                     self.NBE = (self.NBE + len(payload)) % MAX_SEQ
                     while self.NBE in self.rqueue:
+                        tmp = self.NBE
                         self.recv_data += self.rqueue[self.NBE]
-                        self.NBE = (self.NBE + len(rqueue[self.NBE])) % MAX_SEQ
-                        self.rqueue.pop([self.NBE])
+                        self.NBE = (self.NBE + len(self.rqueue[self.NBE])) % MAX_SEQ
+                        self.rqueue.pop(tmp)
                     # send ack, which equals to self.NBE
                     self.ack = self.NBE
                     self.send_ack()
                 elif self._seq_in_window(hdr['seq'], (self.NBE + 1) % MAX_SEQ, (self.LBR + self.max_recv_buffer) % MAX_SEQ):
                     self.rqueue[hdr['seq']] = payload
-
-            if len(self.recv_data) != 0:
-                size = min(max, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
-                data = self.recv_data[:size]
-                self.recv_data = self.recv_data[size:]                
-                self.LBR = (self.LBR + len(data)) % MAX_SEQ
-                return data
         return None
     
     # send payload, called by application
@@ -273,7 +278,9 @@ if __name__ == '__main__':
         if tmp is None:
             break
         data += tmp
+    http_hdr = data.find('\r\n\r\n')
+    file_content = data[http_hdr+4:]
     f = open('workfile', 'w')
-    f.write(data)
+    f.write(file_content)
     f.close()
     tcp.print_info()    
