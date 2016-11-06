@@ -153,7 +153,7 @@ class TCP:
     
     # recv one packet starting from NBE, if out of order then buffer and waiting for NBE to come
     # TODO: add a timeout
-    def recv(self, max = 1000):
+    def recv(self, max = 10240):
         t = time.time()
         while time.time() - t < 3.0:
             if len(self.recv_data) != 0:
@@ -164,7 +164,7 @@ class TCP:
                 return data
             
             try:
-                pkt = self.rsock.recv(4096)
+                pkt = self.rsock.recv(10240)
             except Exception as e:
                 continue
             iphdr, seg = getIPHeader(pkt)
@@ -272,15 +272,25 @@ if __name__ == '__main__':
     tcp.send('GET {} HTTP/1.1\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
-    t = time.time()
+    f = open('workfile', 'a')
+    httpEnd = -1
+    tot_len = 0
     while True:
         tmp = tcp.recv()
         if tmp is None:
             break
         data += tmp
-    http_hdr = data.find('\r\n\r\n')
-    file_content = data[http_hdr+4:]
-    f = open('workfile', 'w')
-    f.write(file_content)
+        if httpEnd == -1:
+            httpEnd = data.find('\r\n\r\n')
+            if httpEnd != -1:
+                data = data[httpEnd + 4:]
+        elif len(data) > 40960:
+            f.write(data)
+            tot_len += len(data)
+            data = ''
+            print tot_len
+    f.write(data)
+    tot_len += len(data)
+    print tot_len
     f.close()
     tcp.print_info()    
