@@ -59,3 +59,4 @@ class IP:
 if __name__ == '__main__':
     ip = IP()
     ip.send('', socket.inet_aton('10.0.2.2'))
+    print ip.recv()
