@@ -33,7 +33,7 @@ class Arp:
     def send(self):
         local_ip = struct.pack('!4B', *[int(x) for x in utils.get_local_ip_address('eth0').split('.')])
         gateway_ip = struct.pack('!4B', *[int(x) for x in utils.get_default_gateway_linux().split('.')])
-        local_mac = self.ethernet.sock.getsockname()[4]
+        local_mac = self.ethernet.send_sock.getsockname()[4]
         self.build_arp(sender_mac = local_mac, sender_ip = local_ip, target_ip = gateway_ip)
         self.ethernet.send(utils.BCAST_MAC, self.arp_packet, ptype = utils.ETHERNET_PROTOCOL_TYPE_ARP)
 

@@ -24,7 +24,7 @@ from ethernet import *
 class IP:
     def __init__(self):
         self.ethernet = Ethernet()
-        self.source_ip = utils.get_local_ip_address('eth0')
+        self.source_ip = self.ethernet.local_ip
         self.ipversion = 4
 
     def _build_header(self, header):
