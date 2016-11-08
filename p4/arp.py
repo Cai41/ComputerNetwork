@@ -30,20 +30,38 @@ class Arp:
             target_ip
             ]
         self.arp_packet = ''.join(self.packet_struct)
-    def send(self):
-        local_ip = struct.pack('!4B', *[int(x) for x in utils.get_local_ip_address('eth0').split('.')])
-        gateway_ip = struct.pack('!4B', *[int(x) for x in utils.get_default_gateway_linux().split('.')])
-        local_mac = self.ethernet.send_sock.getsockname()[4]
+    def _broadcast(self):
+        self.local_ip = struct.pack('!4B', *[int(x) for x in self.ethernet.local_ip.split('.')])
+        self.gateway_ip = struct.pack('!4B', *[int(x) for x in
+            self.ethernet.gateway_ip.split('.')])
+        self.local_mac = self.ethernet.local_mac
         self.build_arp(sender_mac = local_mac, sender_ip = local_ip, target_ip = gateway_ip)
         self.ethernet.send(utils.BCAST_MAC, self.arp_packet, ptype = utils.ETHERNET_PROTOCOL_TYPE_ARP)
+
+    def find_gateway_mac(self):
+        while self.ethernet.gateway_mac == None:
+            frame = self.ethernet.recv_sock.recv(65536)
+            ethernet_header = frame[0:14]
+			dest_mac, source_mac, ptype = struct.unpack("!6s6s2s", ethernet_header)
+
+			arp_header = frame[14:42]
+			_, _, _, _, opcode, source_mac_arp, source_ip_arp, dest_mac_arp,
+            dest_ip_arp = struct.unpack("2s2s1s1s2s6s4s6s4s", arp_header)
+            if opcode == utils.ARPOP_REPLY and self.local_mac == dest_mac and
+            source_ip_arp == self.gateway_ip and ptype ==
+            utils.ETHERNET_PROTOCOL_TYPE_ARP:
+                self.ethernet.gateway_mac = source_mac_arp
+
+
+
+			
 
 
 if __name__ == '__main__':
 
     a = Arp()
-    a.send()
 
     #recv_sock = socket.socket(SOCK_STREAM, IPPROTO_IP)
     #recv_sock.bind(('eth0', SOCK_RAW))
-    while True:
-        print a.ethernet.sock.recvfrom(4096)
+    a.find_gateway_mac()
+
