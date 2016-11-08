@@ -4,8 +4,8 @@ import utils
 
 
 class Arp:
-    def __init__(self):
-        self.ethernet = Ethernet()
+    def __init__(self, ethernet):
+        self.ethernet = ethernet
         self.arp_packet = None
     def build_arp(self, 
             hardware_type = utils.HARDWARE_TYPE_ETHERNET,

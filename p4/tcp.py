@@ -3,6 +3,8 @@ import random
 import time
 from socket import *
 from struct import pack, unpack
+from ip import IP
+from arp import Arp
 
 ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
@@ -59,9 +61,12 @@ def getsourceip():
 
 class TCP:
     def __init__(self, host, uri):
-        self.rsock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)
-        self.rsock.settimeout(2.0)
-        self.ssock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)
+        self.IP = IP()
+
+        # do ARP here
+        self.Arp = Arp(self.IP.ethernet)
+        if self.Arp.find_gateway_mac() == None:
+            print "ARP failed"
         self.uri = uri
         self.host = host
         # if next packet is to be sent, then its seq should be self.seq
