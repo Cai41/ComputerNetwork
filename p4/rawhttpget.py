@@ -17,6 +17,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     host, uri =  parseURL(args.url)
+    print uri
     
     tcp = TCP(host, uri)
     tcp.handshake()
@@ -24,7 +25,8 @@ if __name__ == '__main__':
     tcp.send('GET {} HTTP/1.1\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
-    f = open('workfile', 'a')
+    filename = uri.split('/')[-1]
+    f = open(filename, 'a')
     httpEnd = -1
     tot_len = 0
     while True:
