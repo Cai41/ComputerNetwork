@@ -10,15 +10,16 @@ class Ethernet:
         try:
             #s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.IPPROTO_RAW)
             self.send_sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
-            self.recv_sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0800))
+            self.recv_sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x0003))
         except socket.error , msg:
             print 'Socket could not be created. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
             if msg[0] == 1:
                 print "Need sudo!"
             sys.exit()
 
-        self.send_sock.bind(('eth0', socket.SOCK_RAW))
-        #self.recv_sock.setblocking(0)
+        self.send_sock.bind(('eth0', 0))
+#        self.recv_sock.bind(('eth0', 0))
+        self.recv_sock.settimeout(2.0)
 
         try:
             self.gateway_ip = utils.get_default_gateway_linux()
@@ -27,7 +28,7 @@ class Ethernet:
             sys.exit()
         self.local_mac= self.send_sock.getsockname()[4]
         self.local_ip = utils.get_local_ip_address('eth0')
-        self.gateway_mac = utils.BCAST_MAC
+        self.gateway_mac = None
 
     def _build_frame_header(self, dest_mac, ptype =
             utils.ETHERNET_PROTOCOL_TYPE_IP):
@@ -38,6 +39,10 @@ class Ethernet:
         """dest_mac, packet, ptype default is IP"""
         if dest_mac == None:
             dest_mac = self.gateway_mac
+            if self.gateway_mac == None:
+                print 'gateway_mac cannot be None by now'
+                sys.exit()
+                
         frame = self._build_frame_header(dest_mac, ptype = ptype) + packet
         self.send_sock.send(frame)
 
