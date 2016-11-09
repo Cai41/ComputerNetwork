@@ -20,7 +20,7 @@ import struct
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 from ethernet import *
-
+import random
     
 class IP:
     def __init__(self):
@@ -43,7 +43,8 @@ class IP:
         """segment is from layer above, e.g. tcp packet, dest_ip is binary form"""
         # add header
         
-        ip_header_dict = {'ver_ihl': (self.ipversion << 4) + 5, 'tos': 0, 'tot_len': 0, 'id': 0,
+        random_id = random.randint(0, 65534)
+        ip_header_dict = {'ver_ihl': (self.ipversion << 4) + 5, 'tos': 0, 'tot_len': 20 + len(segment), 'id': random_id,
                           'frag_off': 0, 'ttl': 255, 'protocol': 6, 'cksum': 0,
                           'saddr': self.source_ip, 'daddr': dest_ip}
         ip_header, _ = self._build_header(ip_header_dict)
