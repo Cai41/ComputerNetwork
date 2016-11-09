@@ -1,4 +1,4 @@
 default:
 	chmod +x rawhttpget
 test:
-	sudo python ethernet.py
+	./rawhttpget http://david.choffnes.com/classes/cs4700fa16/project4.php

@@ -5,58 +5,13 @@ from socket import *
 from struct import pack, unpack
 from ip import IP
 from arp import Arp
+import utils
 
-ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
 ACK = 1 << 4
 MAX_SEQ = 1 << 32
 
 
-def default_ip_hdr(sip, dip):
-    return buildIPHeader(default_ip_dict(sip, dip))
-    
-def buildIPHeader(header):
-    return pack('!BBHHHBBHII' , header['ver_ihl'], header['tos'], header['tot_len'],
-                header['id'], header['frag_off'], header['ttl'], header['protocol'],
-                header['cksum'], header['saddr'], header['daddr'])
-
-def default_ip_dict(sip, dip):
-    ip_header_dict = {'ver_ihl': (4 << 4) + 5, 'tos': 0, 'tot_len': 0, 'id': 0,
-                  'frag_off': 0, 'ttl': 255, 'protocol': IPPROTO_TCP, 'cksum': 0,
-                  'saddr': 0, 'daddr': 0}
-    ip_header_dict['saddr'] = sip
-    ip_header_dict['daddr'] = dip
-    return ip_header_dict
-
-def getIPHeader(packet):
-    ip_header = unpack('!BBHHHBBHII', packet[:20])
-    ip_header_dict = dict(zip(ip_header_fmt, ip_header))
-    return ip_header_dict, packet[20:ip_header_dict['tot_len']]
-    
-if pack("H",1) == "\x00\x01":
-    # big endian
-    def checksum(msg):
-        if len(msg) % 2 == 1:
-            msg += '\0'
-        sum = 0
-        for i in range(0, len(msg), 2):
-            w = (ord(msg[i]) << 8) + ord(msg[i+1])
-            sum = ((sum + w) & 0xffff) + ((sum + w) >> 16)
-        return ~sum & 0xffff
-else:
-    def checksum(msg):
-        if len(msg) % 2 == 1:
-            msg += '\0'
-        sum = 0
-        for i in range(0, len(msg), 2):
-            w = ord(msg[i]) + (ord(msg[i+1]) << 8)
-            sum = ((sum + w) & 0xffff) + ((sum + w) >> 16)
-        return ~sum & 0xffff
-
-def getsourceip(): 
-    s = socket(AF_INET, SOCK_DGRAM)
-    s.connect(('google.com', 0))
-    return s.getsockname()[0]
 
 
 class TCP:
@@ -76,7 +31,7 @@ class TCP:
         self.dport = 80
         self.cwnd = 1
         self.dest_advwnd = 0
-        self.sip = unpack('!L', inet_aton(getsourceip()))[0]
+        self.sip = unpack('!L', pack('!4B', *[int(x) for x in self.IP.ethernet.local_ip.split('.')]))[0]
         self.dip = unpack('!L', inet_aton(gethostbyname(host)))[0]
         print inet_ntoa(pack('!L', self.sip))
         print inet_ntoa(pack('!L', self.dip))
@@ -109,7 +64,7 @@ class TCP:
         # make a pseudo header and fill the cksum field
         tcp_length = len(tcp_header)+len(payload)
         psh = pack('!IIBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
-        header['cksum'] = checksum(psh + tcp_header + payload)
+        header['cksum'] = utils.checksum(psh + tcp_header + payload)
         tcp_header =  pack('!HHLLBBH' , header['sport'], header['dport'], header['seq'],
                            header['ack'], header['offset_res'], header['flags'],
                            header['window']) + pack('H', header['cksum']) + pack('!H', header['urg'])
@@ -123,7 +78,7 @@ class TCP:
         tcp_length = len(seg)
         psh = pack('!IIBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
         cksum_msg = psh + seg
-        if checksum(cksum_msg) != 0:
+        if utils.checksum(cksum_msg) != 0:
             print 'cksum fail'
             return None, None
             
@@ -159,7 +114,8 @@ class TCP:
                 return data
             
             try:
-                pkt = self.rsock.recv(10240)
+                pkt = self.IP.recv()
+                #pkt = self.IP.recv(10240)
             except Exception as e:
                 continue
             iphdr, seg = getIPHeader(pkt)
@@ -209,26 +165,27 @@ class TCP:
         self.LBS = (self.LBS + len(payload)) % MAX_SEQ
         self.seq = (self.seq + len(payload)) % MAX_SEQ
         # condition.release()
-        self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + tcp_hdr + payload, (inet_ntoa(pack('!L', self.dip)), 0))
+        self.IP.send(tcp_hdr + payload, inet_ntoa(pack('!L', self.dip)))
     
     # send ack
     def send_ack(self):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 4
-        self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + self._build_tcp_hdr(pkt_dict, ''), (inet_ntoa(pack('!L', self.dip)), 0))
+        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), inet_ntoa(pack('!L', self.dip)))
 
     # send syn
     def send_syn(self):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 1
-        self.ssock.sendto(default_ip_hdr(self.sip, self.dip) + self._build_tcp_hdr(pkt_dict, ''), (inet_ntoa(pack('!L', self.dip)), 0))
+        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), inet_ntoa(pack('!L', self.dip)))
         self.seq += 1
         self.LBS = self.seq - 1
 
     # recv syn&ack, only called by handshake
     def recv_syn_ack(self):
         while True:
-            p = self.rsock.recv(4096)
+            #p = self.IP.recv(4096)
+            p = self.IP.recv()
             iphdr, p = getIPHeader(p)
             hdr, payload = self._strip_tcp_hdr(p)
             if hdr is None or payload is None:

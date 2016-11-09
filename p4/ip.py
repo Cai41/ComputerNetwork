@@ -21,6 +21,7 @@ import struct
 
 from ethernet import *
 
+    
 class IP:
     def __init__(self):
         self.ethernet = Ethernet()
@@ -28,35 +29,45 @@ class IP:
         self.ipversion = 4
 
     def _build_header(self, header):
-        dummy_ip_header = struct.pack('!BBHHHBBH' , header['ver_ihl'], header['tos'], header['tot_len'],
+        pseudo_ip_header = struct.pack('!BBHHHBBH' , header['ver_ihl'], header['tos'], header['tot_len'],
                     header['id'], header['frag_off'], header['ttl'], header['protocol'],
                     header['cksum'] ) + header['saddr'] + header['daddr']
-        cksum = utils.checksum(dummy_ip_header)
+        cksum = utils.checksum(pseudo_ip_header)
         ip_header = struct.pack('!BBHHHBBH' , header['ver_ihl'], header['tos'], header['tot_len'],
                     header['id'], header['frag_off'], header['ttl'], header['protocol'],
                     cksum) + header['saddr'] + header['daddr']
-        return ip_header
+        return ip_header, cksum
         
 
     def send(self, segment, dest_ip):
-        """segment is from layer above, e.g. tcp packet"""
+        """segment is from layer above, e.g. tcp packet, dest_ip is binary form"""
         # add header
         
         ip_header_dict = {'ver_ihl': (self.ipversion << 4) + 5, 'tos': 0, 'tot_len': 0, 'id': 0,
                           'frag_off': 0, 'ttl': 255, 'protocol': 6, 'cksum': 0,
                           'saddr': socket.inet_aton(self.source_ip), 'daddr': dest_ip}
         print ip_header_dict
-        ip_header = self._build_header(ip_header_dict)
+        ip_header, _ = self._build_header(ip_header_dict)
         packet = ip_header + segment 
         self.ethernet.send(packet)
 
     def recv(self):
+        ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
+        
         packet = self.ethernet.recv()
-        segment = packet[20:]
-        # TODO do stuff like here, remove header
-        return segment 
+
+        ip_header = struct.unpack('!BBHHHBBH4s4s', packet[:20])
+        ip_header_dict = dict(zip(ip_header_fmt, ip_header))
+        packet_cksum = ip_header_dict['cksum'] # save real checksum
+        ip_header_dict['cksum'] = 0 # for cksum calculation
+        print ip_header_dict
+        # verify checksum
+        _, cksum = self._build_header(ip_header_dict)
+        if cksum == packet_cksum:
+            segment = packet[20:ip_header_dict['tot_len']]
+            return segment 
+        return None
 
 if __name__ == '__main__':
     ip = IP()
-    ip.send('', socket.inet_aton('10.0.2.2'))
     print ip.recv()
