@@ -65,3 +65,11 @@ class Ethernet:
             sys.exit()
         packet = frame[14:]
         return packet
+
+if __name__ == '__main__':
+    e = Ethernet()
+    #dest_mac = struct.pack('6B', 0x525400123502)
+    dest_mac = '525400123502'.decode('hex')
+    packet1 = '4500002871fa4000ff06386f0a00020fd861ecf5'.decode('hex')
+    packet2 = 'a8410050c005431e120836025010faffefae0000'.decode('hex')
+    e.send(packet1+packet2, dest_mac = dest_mac)
