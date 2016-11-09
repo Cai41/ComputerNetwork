@@ -45,8 +45,7 @@ class IP:
         
         ip_header_dict = {'ver_ihl': (self.ipversion << 4) + 5, 'tos': 0, 'tot_len': 0, 'id': 0,
                           'frag_off': 0, 'ttl': 255, 'protocol': 6, 'cksum': 0,
-                          'saddr': socket.inet_aton(self.source_ip), 'daddr': dest_ip}
-        print ip_header_dict
+                          'saddr': self.source_ip, 'daddr': dest_ip}
         ip_header, _ = self._build_header(ip_header_dict)
         packet = ip_header + segment 
         self.ethernet.send(packet)
@@ -60,11 +59,15 @@ class IP:
         ip_header_dict = dict(zip(ip_header_fmt, ip_header))
         packet_cksum = ip_header_dict['cksum'] # save real checksum
         ip_header_dict['cksum'] = 0 # for cksum calculation
-        print ip_header_dict
+        # ignore UDP
+        if ip_header_dict['protocol'] == 17:
+            print 'got a udp packet'
+            return None
         # verify checksum
         _, cksum = self._build_header(ip_header_dict)
         if cksum == packet_cksum:
             segment = packet[20:ip_header_dict['tot_len']]
+            print 'ip header:', ip_header_dict
             return segment 
         return None
 

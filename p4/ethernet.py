@@ -18,16 +18,18 @@ class Ethernet:
             sys.exit()
 
         self.send_sock.bind(('eth0', 0))
-#        self.recv_sock.bind(('eth0', 0))
-        self.recv_sock.settimeout(2.0)
+        self.recv_sock.settimeout(180.0)
 
+        # gateway_ip, local_mac, local_ip, gateway_mac are all binary
         try:
-            self.gateway_ip = utils.get_default_gateway_linux()
-            print 'gateway_ip:', self.gateway_ip
+            self.gateway_ip = socket.inet_aton(utils.get_default_gateway_linux())
+            print 'gateway_ip:', socket.inet_ntoa(self.gateway_ip)
         except:
             sys.exit()
         self.local_mac= self.send_sock.getsockname()[4]
-        self.local_ip = utils.get_local_ip_address('eth0')
+        self.local_ip = socket.inet_aton(utils.get_local_ip_address('eth0'))
+        print 'local_mac is {}'.format(self.local_mac)
+        print 'local_ip is {}'.format(socket.inet_ntoa(self.local_ip))
         self.gateway_mac = None
 
     def _build_frame_header(self, dest_mac, ptype =
@@ -47,17 +49,19 @@ class Ethernet:
         self.send_sock.send(frame)
 
     def recv(self):
-        frame = self.recv_sock.recv(65535)
+        frame = None
+        try:
+            while frame == None:
+                frame = self.recv_sock.recv(65535)
+                if frame[:6] != self.local_mac:
+                    print 'got a packet not sending to us'
+                    frame = None
+                elif frame[12:14] != utils.ETHERNET_PROTOCOL_TYPE_IP:
+                    print 'got a non-ip packet'
+                    frame = None
+
+        except:
+            print 'No packet received in 3 minutes'
+            sys.exit()
         packet = frame[14:]
         return packet
-
-if __name__ == '__main__':
-    ether = Ethernet()
-    ether.send('')
-    packet = ether.recv()
-    print packet
-
-
-        
-
-

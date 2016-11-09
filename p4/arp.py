@@ -31,9 +31,8 @@ class Arp:
             ]
         self.arp_packet = ''.join(self.packet_struct)
     def _broadcast(self):
-        self.local_ip = struct.pack('!4B', *[int(x) for x in self.ethernet.local_ip.split('.')])
-        self.gateway_ip = struct.pack('!4B', *[int(x) for x in
-            self.ethernet.gateway_ip.split('.')])
+        self.local_ip = self.ethernet.local_ip
+        self.gateway_ip = self.ethernet.gateway_ip
         self.local_mac = self.ethernet.local_mac
         self.build_arp(sender_mac = self.local_mac, sender_ip = self.local_ip,
         target_ip = self.gateway_ip)
@@ -51,12 +50,3 @@ class Arp:
                 self.ethernet.gateway_mac = source_mac_arp
         return self.ethernet.gateway_mac
 
-if __name__ == '__main__':
-
-    a = Arp()
-
-    #recv_sock = socket.socket(SOCK_STREAM, IPPROTO_IP)
-    #recv_sock.bind(('eth0', SOCK_RAW))
-    print a.find_gateway_mac()
-    print a.ethernet.gateway_mac 
-    a.ethernet.send(a.arp_packet, ptype = utils.ETHERNET_PROTOCOL_TYPE_ARP)

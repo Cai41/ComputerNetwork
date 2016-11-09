@@ -22,6 +22,8 @@ class TCP:
         self.Arp = Arp(self.IP.ethernet)
         if self.Arp.find_gateway_mac() == None:
             print "ARP failed"
+        else:
+            print 'gateway_mac', self.IP.ethernet.gateway_mac
         self.uri = uri
         self.host = host
         # if next packet is to be sent, then its seq should be self.seq
@@ -31,10 +33,10 @@ class TCP:
         self.dport = 80
         self.cwnd = 1
         self.dest_advwnd = 0
-        self.sip = unpack('!L', pack('!4B', *[int(x) for x in self.IP.ethernet.local_ip.split('.')]))[0]
-        self.dip = unpack('!L', inet_aton(gethostbyname(host)))[0]
-        print inet_ntoa(pack('!L', self.sip))
-        print inet_ntoa(pack('!L', self.dip))
+        self.sip = self.IP.ethernet.local_ip
+        self.dip = inet_aton(gethostbyname(host))
+        print 'At TCP, source ip:', inet_ntoa(self.sip)
+        print 'At TCP, dest ip:', inet_ntoa(self.dip)
         # data that haven't been read by application, starting from seq number self.LBR + 1, ending at self.NBE - 1
         self.recv_data  = ''
         # seqno of last ACK received, changing only when ack is recieved
@@ -63,7 +65,7 @@ class TCP:
         
         # make a pseudo header and fill the cksum field
         tcp_length = len(tcp_header)+len(payload)
-        psh = pack('!IIBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
+        psh = pack('!4s4sBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
         header['cksum'] = utils.checksum(psh + tcp_header + payload)
         tcp_header =  pack('!HHLLBBH' , header['sport'], header['dport'], header['seq'],
                            header['ack'], header['offset_res'], header['flags'],
@@ -76,7 +78,7 @@ class TCP:
         tcp_header_dict = dict(zip(tcp_header_fmt, tcp_header))
 
         tcp_length = len(seg)
-        psh = pack('!IIBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
+        psh = pack('!4s4sBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
         cksum_msg = psh + seg
         if utils.checksum(cksum_msg) != 0:
             print 'cksum fail'
@@ -115,11 +117,12 @@ class TCP:
             
             try:
                 pkt = self.IP.recv()
+                if pkt == None:
+                    continue
                 #pkt = self.IP.recv(10240)
             except Exception as e:
                 continue
-            iphdr, seg = getIPHeader(pkt)
-            hdr, payload = self._strip_tcp_hdr(seg)
+            hdr, payload = self._strip_tcp_hdr(pkt)
             if hdr is None or payload is None:
                 t = time.time()
                 self.send_ack()
@@ -165,19 +168,19 @@ class TCP:
         self.LBS = (self.LBS + len(payload)) % MAX_SEQ
         self.seq = (self.seq + len(payload)) % MAX_SEQ
         # condition.release()
-        self.IP.send(tcp_hdr + payload, inet_ntoa(pack('!L', self.dip)))
+        self.IP.send(tcp_hdr + payload, self.dip)
     
     # send ack
     def send_ack(self):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 4
-        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), inet_ntoa(pack('!L', self.dip)))
+        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), self.dip)
 
     # send syn
     def send_syn(self):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = 1 << 1
-        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), inet_ntoa(pack('!L', self.dip)))
+        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), self.dip)
         self.seq += 1
         self.LBS = self.seq - 1
 
@@ -186,7 +189,9 @@ class TCP:
         while True:
             #p = self.IP.recv(4096)
             p = self.IP.recv()
-            iphdr, p = getIPHeader(p)
+            if p == None:
+                continue
+            print p
             hdr, payload = self._strip_tcp_hdr(p)
             if hdr is None or payload is None:
                 continue
