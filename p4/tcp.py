@@ -10,6 +10,7 @@ import utils
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
 ACK = 1 << 4
 FIN = 1 << 0
+SYN = 1 << 1
 MAX_SEQ = 1 << 32
 
 
@@ -170,35 +171,37 @@ class TCP:
     # send ack
     def send_ack(self):
         pkt_dict = self._default_hdr()
-        pkt_dict['flags'] = 1 << 4
+        pkt_dict['flags'] = ACK
         self.IP.send(self._build_tcp_hdr(pkt_dict, ''), self.dip)
 
     # send syn
     def send_syn(self):
         pkt_dict = self._default_hdr()
-        pkt_dict['flags'] = 1 << 1
+        pkt_dict['flags'] = SYN
         self.IP.send(self._build_tcp_hdr(pkt_dict, ''), self.dip)
-        self.seq += 1
-        self.LBS = self.seq - 1
 
     # recv syn&ack, only called by handshake
     def recv_syn_ack(self):
-        while True:
+        t = time.time()
+        while time.time() - t < 3.0:
             #p = self.IP.recv(4096)
             p = self.IP.recv()
             if p == None:
                 continue
-            print p
+            # print p
             hdr, payload = self._strip_tcp_hdr(p)
             if hdr is None or payload is None:
                 continue
             if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
+                self.seq += 1
+                self.LBS = self.seq - 1                
                 self.ack = hdr['seq'] + 1
                 self.NBE = self.ack
                 self.LBR = self.ack - 1
                 self.LAR = hdr['ack']
                 self.dest_advwnd = hdr['window']
-                return
+                return True
+        return False
 
     # send fin
     def send_fin(self):
@@ -225,7 +228,8 @@ class TCP:
             
     def handshake(self):
         self.send_syn()
-        self.recv_syn_ack()
+        while False == self.recv_syn_ack():
+            self.send_syn()
         self.send_ack()
 
     def teardown(self):
