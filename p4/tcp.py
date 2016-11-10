@@ -51,7 +51,7 @@ class TCP:
         self.NBE = self.ack
         # seqno of last byte application has read, changing when self.recv() is called
         self.LBR = self.ack - 1
-        self.max_recv_buffer = 4096
+        self.max_recv_buffer = 65535
 
     # for reciever
     def _advertised_wnd(self):
@@ -113,7 +113,7 @@ class TCP:
                 data = self.recv_data[:size]
                 self.recv_data = self.recv_data[size:]                
                 self.LBR = (self.LBR + len(data)) % MAX_SEQ
-                print 'got data:', data
+                #print 'got data:', data
                 return data
             
             try:
