@@ -51,6 +51,7 @@ class IP:
         packet = ip_header + segment 
         self.ethernet.send(packet)
 
+    # return packet if checksum and protocol is correct. Otherwise return None
     def recv(self):
         ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
         
@@ -69,7 +70,8 @@ class IP:
         if cksum == packet_cksum:
             segment = packet[20:ip_header_dict['tot_len']]
             #print 'ip header:', ip_header_dict
-            return segment 
+            return segment
+        print 'ip cksum fail'
         return None
 
 if __name__ == '__main__':

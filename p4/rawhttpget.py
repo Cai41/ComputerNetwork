@@ -33,6 +33,7 @@ if __name__ == '__main__':
         try:
             tmp = tcp.recv()
         except:
+            print 'aaaaaaaaaaaaaaaaaaaaa'
             break
         data += tmp
         if httpEnd == -1:

@@ -14,8 +14,6 @@ SYN = 1 << 1
 MAX_SEQ = 1 << 32
 
 
-
-
 class TCP:
     def __init__(self, host, uri):
         self.IP = IP()
@@ -106,10 +104,11 @@ class TCP:
         return pos < max_pos
     
     # recv one packet starting from NBE, if out of order then buffer and waiting for NBE to come
-    # TODO: add a timeout
+    # If ip/tcp checksum is incorrect, send ack again.
+    # If no packet recieved in 3 minutes, ip.recv() will throw exception, then tcp.recv() will return None
+    # If packet and ip/tcp checksum is correct, return payload
     def recv(self, max = 10240):
-        t = time.time()
-        while time.time() - t < 4.0:
+        while True:
             if len(self.recv_data) != 0:
                 size = min(max, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
                 data = self.recv_data[:size]
@@ -121,13 +120,13 @@ class TCP:
             try:
                 pkt = self.IP.recv()
                 if pkt == None:
+                    self.send_ack()
                     continue
                 #pkt = self.IP.recv(10240)
             except Exception as e:
                 continue
             hdr, payload = self._strip_tcp_hdr(pkt)
             if hdr is None or payload is None:
-                t = time.time()
                 self.send_ack()
                 continue
             if hdr['sport'] != self.dport or hdr['dport'] != self.sport:
@@ -152,11 +151,11 @@ class TCP:
                         self.rqueue.pop(tmp)
                     # send ack, which equals to self.NBE
                     self.ack = self.NBE
-                    self.send_ack()
                 elif self._seq_in_window(hdr['seq'], (self.NBE + 1) % MAX_SEQ, (self.LBR + self.max_recv_buffer) % MAX_SEQ):
                     self.rqueue[hdr['seq']] = payload
+                self.send_ack()
         return None
-    
+
     # send payload, called by application
     # TODO: if dest_advwmd is 0, then keep calling self.recv() until dest_advwnd is not 0
     def send(self, payload):
