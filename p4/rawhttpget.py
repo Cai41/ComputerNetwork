@@ -44,6 +44,7 @@ if __name__ == '__main__':
             tot_len += len(data)
             data = ''
             print tot_len
+    tcp.teardown()
     f.write(data)
     tot_len += len(data)
     print tot_len

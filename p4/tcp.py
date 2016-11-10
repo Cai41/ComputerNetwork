@@ -9,6 +9,7 @@ import utils
 
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
 ACK = 1 << 4
+FIN = 1 << 0
 MAX_SEQ = 1 << 32
 
 
@@ -107,7 +108,7 @@ class TCP:
     # TODO: add a timeout
     def recv(self, max = 10240):
         t = time.time()
-        while time.time() - t < 3.0:
+        while time.time() - t < 4.0:
             if len(self.recv_data) != 0:
                 size = min(max, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
                 data = self.recv_data[:size]
@@ -158,17 +159,12 @@ class TCP:
     # send payload, called by application
     # TODO: if dest_advwmd is 0, then keep calling self.recv() until dest_advwnd is not 0
     def send(self, payload):
-        # condition.acquire()
-        # if buffer reaches window size, sleep
-        # while (self.LBS - self.LAR + MAX_SEQ) % MAX_SEQ>= min(self.max_recv_buffer, self.adwnd)
-            # condition.wait()
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = (1 << 3) + (1 << 4)
         tcp_hdr = self._build_tcp_hdr(pkt_dict, payload)
         self.squeue[self.LBS+1] = (payload, pkt_dict, time.time())
         self.LBS = (self.LBS + len(payload)) % MAX_SEQ
         self.seq = (self.seq + len(payload)) % MAX_SEQ
-        # condition.release()
         self.IP.send(tcp_hdr + payload, self.dip)
     
     # send ack
@@ -203,11 +199,39 @@ class TCP:
                 self.LAR = hdr['ack']
                 self.dest_advwnd = hdr['window']
                 return
-        
+
+    # send fin
+    def send_fin(self):
+        pkt_dict = self._default_hdr()
+        pkt_dict['flags'] = 1
+        self.IP.send(self._build_tcp_hdr(pkt_dict, ''), self.dip)
+
+    # recv ack for fin, called after sending fin
+    def recv_fin_ack(self):
+        t = time.time()
+        while time.time() - t  < 3.0:
+            #p = self.IP.recv(4096)
+            p = self.IP.recv()
+            if p == None:
+                continue
+            print p
+            hdr, payload = self._strip_tcp_hdr(p)
+            if hdr is None or payload is None:
+                continue
+            if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
+                if hdr['flags'] and FIN != 0:
+                    return True
+        return False
+            
     def handshake(self):
         self.send_syn()
         self.recv_syn_ack()
         self.send_ack()
+
+    def teardown(self):
+        self.send_fin()
+        while False == self.recv_fin_ack():
+            self.send_fin()
 
     def print_info(self):
         print 'NBE: ' + str(self.NBE)
