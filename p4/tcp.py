@@ -69,7 +69,7 @@ class TCP:
         header['cksum'] = utils.checksum(psh + tcp_header + payload)
         tcp_header =  pack('!HHLLBBH' , header['sport'], header['dport'], header['seq'],
                            header['ack'], header['offset_res'], header['flags'],
-                           header['window']) + pack('H', header['cksum']) + pack('!H', header['urg'])
+                           header['window']) + pack('!H', header['cksum']) + pack('!H', header['urg'])
         return tcp_header
 
     # strip the tcp header, return header dictionary and payload
@@ -113,6 +113,7 @@ class TCP:
                 data = self.recv_data[:size]
                 self.recv_data = self.recv_data[size:]                
                 self.LBR = (self.LBR + len(data)) % MAX_SEQ
+                print 'got data:', data
                 return data
             
             try:

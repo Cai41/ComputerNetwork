@@ -30,8 +30,9 @@ if __name__ == '__main__':
     httpEnd = -1
     tot_len = 0
     while True:
-        tmp = tcp.recv()
-        if tmp is None:
+        try:
+            tmp = tcp.recv()
+        except:
             break
         data += tmp
         if httpEnd == -1:

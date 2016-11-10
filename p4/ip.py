@@ -62,13 +62,13 @@ class IP:
         ip_header_dict['cksum'] = 0 # for cksum calculation
         # ignore UDP
         if ip_header_dict['protocol'] == 17:
-            print 'got a udp packet'
+            #print 'got a udp packet'
             return None
         # verify checksum
         _, cksum = self._build_header(ip_header_dict)
         if cksum == packet_cksum:
             segment = packet[20:ip_header_dict['tot_len']]
-            print 'ip header:', ip_header_dict
+            #print 'ip header:', ip_header_dict
             return segment 
         return None
 

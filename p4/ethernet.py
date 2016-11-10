@@ -18,7 +18,7 @@ class Ethernet:
             sys.exit()
 
         self.send_sock.bind(('eth0', 0))
-        self.recv_sock.settimeout(180.0)
+        self.recv_sock.settimeout(2.0)
 
         # gateway_ip, local_mac, local_ip, gateway_mac are all binary
         try:
@@ -54,7 +54,7 @@ class Ethernet:
             while frame == None:
                 frame = self.recv_sock.recv(65535)
                 if frame[:6] != self.local_mac:
-                    print 'got a packet not sending to us'
+                    #print 'got a packet not sending to us'
                     frame = None
                 elif frame[12:14] != utils.ETHERNET_PROTOCOL_TYPE_IP:
                     print 'got a non-ip packet'
@@ -70,6 +70,6 @@ if __name__ == '__main__':
     e = Ethernet()
     #dest_mac = struct.pack('6B', 0x525400123502)
     dest_mac = '525400123502'.decode('hex')
-    packet1 = '4500002871fa4000ff06386f0a00020fd861ecf5'.decode('hex')
-    packet2 = 'a8410050c005431e120836025010faffefae0000'.decode('hex')
+    packet1 = '4500002859210000ff0691480a00020fd861ecf5'.decode('hex')
+    packet2 = '59e800502cc7919c0000000050021000b5e00000'.decode('hex')
     e.send(packet1+packet2, dest_mac = dest_mac)
