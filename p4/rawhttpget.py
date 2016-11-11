@@ -50,5 +50,5 @@ if __name__ == '__main__':
     tot_len += len(data)
     print tot_len
     f.close()
-    tcp.print_info()    
+    tcp.print_info()
 

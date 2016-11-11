@@ -5,6 +5,7 @@ from socket import *
 from struct import pack, unpack
 from ip import IP
 from arp import Arp
+from threading import Lock, Thread
 import utils
 
 tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window', 'cksum', 'urg']
@@ -45,6 +46,7 @@ class TCP:
         self.LBS = self.seq - 1
         # send queue to store all un-acked packet
         self.squeue = {}
+        self.slock = Lock()
         # recv queue to store all out-of-order packet
         self.rqueue = {}
         # seqno of next byte expected, changing only when payload is received
@@ -52,6 +54,8 @@ class TCP:
         # seqno of last byte application has read, changing when self.recv() is called
         self.LBR = self.ack - 1
         self.max_recv_buffer = 65535
+        # fin indicate whether it is finished
+        self.fin = False
 
     # for reciever
     def _advertised_wnd(self):
@@ -132,13 +136,22 @@ class TCP:
             if hdr['sport'] != self.dport or hdr['dport'] != self.sport:
                 continue
             # if it is ack
-            if hdr['flags'] & ACK:
+            if hdr['flags'] & ACK != 0:
                 # if it is within the send window
+                # print 'ack recevied: ', hdr['ack']
+                # print 'self.LBS: ', self.LBS
                 if self._seq_in_window(hdr['ack'], self.LAR + 1, self.LBS + 1):
+                    acq = self.slock.acquire()
                     self.LAR = hdr['ack']
-                    filter_queue = {k: v for k, v in self.squeue.iteritems() if k < hdr['ack']}
+                    filter_queue = {k: v for k, v in self.squeue.iteritems() if k >= hdr['ack']}
                     self.squeue = filter_queue
                     self.cwnd += 1
+                    rel = self.slock.release()
+
+            if hdr['flags'] & FIN != 0:
+                self.ack = hdr['seq'] + 1
+                self.send_ack()
+                print 'rqueue: ', len(self.rqueue)
 
             if len(payload) != 0:
                 if hdr['seq'] == self.NBE:
@@ -162,10 +175,29 @@ class TCP:
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = (1 << 3) + (1 << 4)
         tcp_hdr = self._build_tcp_hdr(pkt_dict, payload)
+        acq = self.slock.acquire()
         self.squeue[self.LBS+1] = (payload, pkt_dict, time.time())
+        rel = self.slock.release()
         self.LBS = (self.LBS + len(payload)) % MAX_SEQ
         self.seq = (self.seq + len(payload)) % MAX_SEQ
         self.IP.send(tcp_hdr + payload, self.dip)
+
+    # re-transmit un-acked packet that timeout
+    def retrans(self):
+        while True:
+            if self.fin:
+                break
+            acq = self.slock.acquire()
+            for seq in self.squeue:
+                if(time.time() - self.squeue[seq][2] > 2.0):
+                    self.squeue[seq] = (self.squeue[seq][0], self.squeue[seq][1], time.time())
+                    tcp_hdr = self._build_tcp_hdr(self.squeue[seq][1], self.squeue[seq][0])
+                    print 'retrans', seq
+                    print 'LAR', self.LAR
+                    print 'LBS', self.LBS
+                    self.IP.send(tcp_hdr + self.squeue[seq][0], self.dip)
+            rel = self.slock.release()
+            time.sleep(4.0)
     
     # send ack
     def send_ack(self):
@@ -202,10 +234,10 @@ class TCP:
                 return True
         return False
 
-    # send fin
+    # send fin, called when client want to disconnect
     def send_fin(self):
         pkt_dict = self._default_hdr()
-        pkt_dict['flags'] = 1
+        pkt_dict['flags'] = FIN + ACK
         self.IP.send(self._build_tcp_hdr(pkt_dict, ''), self.dip)
 
     # recv ack for fin, called after sending fin
@@ -216,12 +248,12 @@ class TCP:
             p = self.IP.recv()
             if p == None:
                 continue
-            print p
+            # print p
             hdr, payload = self._strip_tcp_hdr(p)
             if hdr is None or payload is None:
                 continue
             if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
-                if hdr['flags'] and FIN != 0:
+                if hdr['flags'] & ACK != 0:
                     return True
         return False
             
@@ -230,11 +262,14 @@ class TCP:
         while False == self.recv_syn_ack():
             self.send_syn()
         self.send_ack()
+        t = Thread(target=self.retrans)
+        t.start()
 
     def teardown(self):
         self.send_fin()
         while False == self.recv_fin_ack():
             self.send_fin()
+        self.fin = True
 
     def print_info(self):
         print 'NBE: ' + str(self.NBE)
