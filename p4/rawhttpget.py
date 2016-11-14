@@ -13,17 +13,15 @@ def parseURL(url):
         path += 'index.html'        
     return u.netloc, path
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog = 'rawHttp')
-    parser.add_argument('url')
-    args = parser.parse_args()
-
-    host, uri =  parseURL(args.url)
-    print uri
-
+def run(host, uri):
     lenPattern = re.compile(r'Content-Length: ([0-9]+)')
     tcp = TCP(host, uri)
-    tcp.handshake()
+    try:
+        tcp.handshake()
+    except:
+        print 'Can not connect to server'
+        tcp.fin = True
+        return
     tcp.print_info()
     send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
     for s in send_data:
@@ -54,7 +52,11 @@ if __name__ == '__main__':
             httpEnd = data.find('\r\n\r\n')
             if httpEnd != -1:
                 length = lenPattern.search(data[:httpEnd])
+                header = data[:httpEnd + 4].split()
                 data = data[httpEnd + 4:]
+                if (header[1] != '200'):
+                    print 'HTTP Response code is not 200, exit'
+                    return
         else:
             if len(data) > 40960:
                 f.write(data)
@@ -67,10 +69,20 @@ if __name__ == '__main__':
     if time.time() - t > 180:
         print 'No data received within 3 minutes'
     f.write(data)
+    f.close()    
     tot_len += len(data)
     if length is not None:
         tcp.teardown()
     print tot_len
-    f.close()
     tcp.print_info()
     print 'we are done'
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog = 'rawHttp')
+    parser.add_argument('url')
+    args = parser.parse_args()
+
+    host, uri =  parseURL(args.url)
+    print host, uri
+
+    run(host, uri)
