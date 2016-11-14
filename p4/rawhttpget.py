@@ -25,7 +25,7 @@ if __name__ == '__main__':
     tcp = TCP(host, uri)
     tcp.handshake()
     tcp.print_info()
-    tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
+    tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
     filename = uri.split('/')[-1]
@@ -34,15 +34,16 @@ if __name__ == '__main__':
     tot_len = 0
     length = None
     t = time.time()
-    try_time = 0
     while time.time() - t < 300:
         try:
             tmp = tcp.recv()
         except:
-            print 'aaaaaaaaaaaaaaaaaaaaa'
+            print 'Ethernet timeout'
             continue
+
         # return None means received FIN/RST from server
         if tmp == None: break
+
         data += tmp
         t = time.time()
         if httpEnd == -1:
@@ -57,9 +58,9 @@ if __name__ == '__main__':
                 data = ''
             if length is not None and tot_len + len(data) == int(length.group(1)):
                 break
-    tcp.teardown()
     f.write(data)
     tot_len += len(data)
+    tcp.teardown()
     print tot_len
     f.close()
     tcp.print_info()

@@ -128,7 +128,7 @@ class TCP:
                 break
             
             try:
-                pkt = self.IP.recv()
+                pkt = self.IP.recv(self.dip)
                 if pkt == None:
                     self.send_ack()
                     continue
@@ -169,6 +169,7 @@ class TCP:
                     self.rqueue[hdr['seq']] = payload
                 self.send_ack()
 
+            # If RST/FIN in flag, then send ack, set self.fin to be true
             if hdr['flags'] & FIN != 0 or hdr['flags'] & RST != 0:
                 self.ack = max(hdr['seq'] + 1, self.ack + 1)
                 self.send_ack()
@@ -228,7 +229,7 @@ class TCP:
         t = time.time()
         while time.time() - t < 3.0:
             #p = self.IP.recv(4096)
-            p = self.IP.recv()
+            p = self.IP.recv(self.dip)
             if p == None:
                 continue
             # print p
@@ -257,7 +258,7 @@ class TCP:
         t = time.time()
         while time.time() - t  < 3.0:
             #p = self.IP.recv(4096)
-            p = self.IP.recv()
+            p = self.IP.recv(self.dip)
             if p == None:
                 continue
             # print p
@@ -280,10 +281,29 @@ class TCP:
     def teardown(self):
         self.send_fin()
         while False == self.recv_fin_ack():
+            print 'loop fin'
             self.send_fin()
         self.lock.acquire()
+        if self.fin:
+            # self.fin is True means already received FIN.RST from server
+            self.lock.release()
+            return
         self.fin = True
         self.lock.release()
+        while True:
+            p = self.IP.recv(self.dip)
+            if p == None:
+                continue
+            # print p
+            hdr, payload = self._strip_tcp_hdr(p)
+            if hdr is None or payload is None:
+                continue
+            if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
+                if hdr['flags'] & FIN != 0:
+                    self.ack = hdr['seq'] + 1
+                    self.seq = hdr['ack']
+                    self.send_ack()
+                    break
         # if hdr['flags'] & FIN != 0:
         #     self.ack = hdr['seq'] + 1
         #     self.send_ack()
