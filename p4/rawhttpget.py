@@ -38,6 +38,7 @@ if __name__ == '__main__':
     length = None
     t = time.time()
     while time.time() - t < 300:
+        if tcp.fin: break
         try:
             tmp = tcp.recv()
         except:
@@ -63,11 +64,13 @@ if __name__ == '__main__':
             # If there is Content-Length in header, the compare data received with it
             if length is not None and tot_len + len(data) == int(length.group(1)):
                 break
-    if time.time() - t > 300:
-        print 'Not receiving data til 5 minutes'
+    if time.time() - t > 180:
+        print 'No data received within 3 minutes'
     f.write(data)
     tot_len += len(data)
-    tcp.teardown()
+    if length is not None:
+        tcp.teardown()
     print tot_len
     f.close()
     tcp.print_info()
+    print 'we are done'
