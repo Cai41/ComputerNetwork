@@ -26,7 +26,7 @@ if __name__ == '__main__':
     tcp.print_info()
     data = ''
     filename = uri.split('/')[-1]
-    f = open(filename, 'a')
+    f = open(filename, 'w')
     httpEnd = -1
     tot_len = 0
     while True:
