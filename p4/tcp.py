@@ -122,7 +122,7 @@ class TCP:
                 return data
             
             try:
-                pkt = self.IP.recv()
+                pkt = self.IP.recv(self.dip)
                 if pkt == None:
                     self.send_ack()
                     continue
@@ -216,7 +216,7 @@ class TCP:
         t = time.time()
         while time.time() - t < 3.0:
             #p = self.IP.recv(4096)
-            p = self.IP.recv()
+            p = self.IP.recv(self.dip)
             if p == None:
                 continue
             # print p
@@ -245,7 +245,7 @@ class TCP:
         t = time.time()
         while time.time() - t  < 3.0:
             #p = self.IP.recv(4096)
-            p = self.IP.recv()
+            p = self.IP.recv(self.dip)
             if p == None:
                 continue
             # print p
@@ -266,8 +266,10 @@ class TCP:
         t.start()
 
     def teardown(self):
+        print 'teardown send fin 1st'
         self.send_fin()
         while False == self.recv_fin_ack():
+            print 'loop fin'
             self.send_fin()
         self.fin = True
 
