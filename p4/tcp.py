@@ -268,7 +268,7 @@ class TCP:
             self.send_fin()
         self.fin = True
         while True:
-            p = self.IP.recv()
+            p = self.IP.recv(self.dip)
             if p == None:
                 continue
             # print p
@@ -278,6 +278,7 @@ class TCP:
             if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
                 if hdr['flags'] & FIN != 0:
                     self.ack = hdr['seq'] + 1
+                    self.seq = hdr['ack']
                     self.send_ack()
                     break
         # if hdr['flags'] & FIN != 0:

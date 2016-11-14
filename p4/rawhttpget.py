@@ -25,7 +25,7 @@ if __name__ == '__main__':
     tcp = TCP(host, uri)
     tcp.handshake()
     tcp.print_info()
-    tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
+    tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
     filename = uri.split('/')[-1]

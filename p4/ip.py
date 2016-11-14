@@ -52,7 +52,7 @@ class IP:
         self.ethernet.send(packet)
 
     # return packet if checksum and protocol is correct. Otherwise return None
-    def recv(self):
+    def recv(self, from_ip):
         ip_header_fmt = ['ver_ihl', 'tos', 'tot_len', 'id', 'frag_off', 'ttl', 'protocol', 'cksum', 'saddr', 'daddr']
         
         packet = self.ethernet.recv()
@@ -61,8 +61,8 @@ class IP:
         ip_header_dict = dict(zip(ip_header_fmt, ip_header))
         packet_cksum = ip_header_dict['cksum'] # save real checksum
         ip_header_dict['cksum'] = 0 # for cksum calculation
-        # ignore UDP
-        if ip_header_dict['protocol'] == 17:
+        # ignore UDP and packets not from server we want
+        if ip_header_dict['protocol'] == 17 or ip_header_dict['saddr'] != from_ip:
             #print 'got a udp packet'
             return None
         # verify checksum
