@@ -40,12 +40,16 @@ if __name__ == '__main__':
         except:
             print 'aaaaaaaaaaaaaaaaaaaaa'
             continue
+        if tmp == None:
+            break
         data += tmp
         t = time.time()
         if httpEnd == -1:
             httpEnd = data.find('\r\n\r\n')
             if httpEnd != -1:
-                length = lenPattern.search(data[:httpEnd]).group(1)
+                lenp = lenPattern.search(data[:httpEnd])
+                if lenp != None:
+                    length = int(lenp.group(1))
                 data = data[httpEnd + 4:]
         else:
             if len(data) > 40960:
@@ -53,9 +57,9 @@ if __name__ == '__main__':
                 tot_len += len(data)
                 data = ''
             print tot_len, length, tot_len + len(data)
-            if tot_len + len(data) == int(length):
+            if length != 0 and tot_len + len(data) == length:
+                tcp.teardown()
                 break
-    tcp.teardown()
     f.write(data)
     tot_len += len(data)
     print tot_len
