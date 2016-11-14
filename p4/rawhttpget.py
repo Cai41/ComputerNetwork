@@ -32,28 +32,30 @@ if __name__ == '__main__':
     f = open(filename, 'w')
     httpEnd = -1
     tot_len = 0
-    length = 0
+    length = None
     t = time.time()
+    try_time = 0
     while time.time() - t < 300:
         try:
             tmp = tcp.recv()
         except:
             print 'aaaaaaaaaaaaaaaaaaaaa'
             continue
+        # return None means received FIN/RST from server
+        if tmp == None: break
         data += tmp
         t = time.time()
         if httpEnd == -1:
             httpEnd = data.find('\r\n\r\n')
             if httpEnd != -1:
-                length = lenPattern.search(data[:httpEnd]).group(1)
+                length = lenPattern.search(data[:httpEnd])
                 data = data[httpEnd + 4:]
         else:
             if len(data) > 40960:
                 f.write(data)
                 tot_len += len(data)
                 data = ''
-            print tot_len, length, tot_len + len(data)
-            if tot_len + len(data) == int(length):
+            if length is not None and tot_len + len(data) == int(length.group(1)):
                 break
     tcp.teardown()
     f.write(data)

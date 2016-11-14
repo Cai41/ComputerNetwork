@@ -12,6 +12,7 @@ tcp_header_fmt = ['sport', 'dport', 'seq', 'ack', 'offset_res', 'flags', 'window
 ACK = 1 << 4
 FIN = 1 << 0
 SYN = 1 << 1
+RST = 1 << 2
 MAX_SEQ = 1 << 32
 
 
@@ -56,11 +57,12 @@ class TCP:
         self.max_recv_buffer = 65535
         # fin indicate whether it is finished
         self.fin = False
+        self.lock = Lock()
 
     # for reciever
     def _advertised_wnd(self):
         return self.max_recv_buffer - ((self.NBE-1)-self.LBR)
-    
+        
     # build header based on dictionary
     def _build_tcp_hdr(self, header, payload):
         tcp_header =  pack('!HHLLBBHHH' , header['sport'], header['dport'], header['seq'],
@@ -111,15 +113,19 @@ class TCP:
     # If ip/tcp checksum is incorrect, send ack again.
     # If no packet recieved in 3 minutes, ip.recv() will throw exception, then tcp.recv() will return None
     # If packet and ip/tcp checksum is correct, return payload
-    def recv(self, max = 10240):
+    def recv(self, max_size = 10240):
         while True:
             if len(self.recv_data) != 0:
-                size = min(max, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
+                size = min(max_size, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
                 data = self.recv_data[:size]
                 self.recv_data = self.recv_data[size:]                
                 self.LBR = (self.LBR + len(data)) % MAX_SEQ
                 #print 'got data:', data
                 return data
+
+            # If no data and received fin, return None
+            if self.fin:
+                break
             
             try:
                 pkt = self.IP.recv()
@@ -162,6 +168,14 @@ class TCP:
                 elif self._seq_in_window(hdr['seq'], (self.NBE + 1) % MAX_SEQ, (self.LBR + self.max_recv_buffer) % MAX_SEQ):
                     self.rqueue[hdr['seq']] = payload
                 self.send_ack()
+
+            if hdr['flags'] & FIN != 0 or hdr['flags'] & RST != 0:
+                self.ack = max(hdr['seq'] + 1, self.ack + 1)
+                self.send_ack()
+                self.lock.acquire()
+                self.fin = True
+                self.lock.release()
+                print 'rqueue: ', len(self.rqueue)
         return None
 
     # send payload, called by application
@@ -180,8 +194,11 @@ class TCP:
     # re-transmit un-acked packet that timeout
     def retrans(self):
         while True:
+            self.lock.acquire()
             if self.fin:
+                self.lock.release()
                 break
+            self.lock.release()
             acq = self.slock.acquire()
             for seq in self.squeue:
                 if(time.time() - self.squeue[seq][2] > 2.0):
@@ -264,20 +281,9 @@ class TCP:
         self.send_fin()
         while False == self.recv_fin_ack():
             self.send_fin()
+        self.lock.acquire()
         self.fin = True
-        while True:
-            p = self.IP.recv()
-            if p == None:
-                continue
-            # print p
-            hdr, payload = self._strip_tcp_hdr(p)
-            if hdr is None or payload is None:
-                continue
-            if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
-                if hdr['flags'] & FIN != 0:
-                    self.ack = hdr['seq'] + 1
-                    self.send_ack()
-                    break
+        self.lock.release()
         # if hdr['flags'] & FIN != 0:
         #     self.ack = hdr['seq'] + 1
         #     self.send_ack()
