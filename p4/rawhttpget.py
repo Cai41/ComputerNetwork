@@ -52,8 +52,8 @@ if __name__ == '__main__':
                 f.write(data)
                 tot_len += len(data)
                 data = ''
-                print tot_len, length, tot_len + len(data)
-            if tot_len + len(data) == length:
+            print tot_len, length, tot_len + len(data)
+            if tot_len + len(data) == int(length):
                 break
     tcp.teardown()
     f.write(data)
