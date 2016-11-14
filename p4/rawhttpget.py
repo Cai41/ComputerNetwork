@@ -25,7 +25,10 @@ if __name__ == '__main__':
     tcp = TCP(host, uri)
     tcp.handshake()
     tcp.print_info()
-    tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
+    send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
+    for s in send_data:
+        tcp.send(s)
+    # tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
     filename = uri.split('/')[-1]
@@ -56,12 +59,15 @@ if __name__ == '__main__':
                 f.write(data)
                 tot_len += len(data)
                 data = ''
+                print 'Data recieved: ', tot_len
+            # If there is Content-Length in header, the compare data received with it
             if length is not None and tot_len + len(data) == int(length.group(1)):
                 break
+    if time.time() - t > 300:
+        print 'Not receiving data til 5 minutes'
     f.write(data)
     tot_len += len(data)
     tcp.teardown()
     print tot_len
     f.close()
     tcp.print_info()
-

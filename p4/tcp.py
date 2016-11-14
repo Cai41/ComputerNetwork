@@ -111,10 +111,14 @@ class TCP:
     
     # recv one packet starting from NBE, if out of order then buffer and waiting for NBE to come
     # If ip/tcp checksum is incorrect, send ack again.
-    # If no packet recieved in 3 minutes, ip.recv() will throw exception, then tcp.recv() will return None
+    # If receive a FIN/REST, send back ACK, and return None to notify upper application
+    # If nothing received in 10 seconds, return empty string(in case of network disconnect, server down, etc..)
     # If packet and ip/tcp checksum is correct, return payload
     def recv(self, max_size = 10240):
-        while True:
+        # Add a timer to avoid loop forever(in case of network disconnect, server down ....)
+        t = time.time()
+        while time.time() - t < 10:
+            # If there is data int the buffer, return immediately
             if len(self.recv_data) != 0:
                 size = min(max_size, (self.NBE + MAX_SEQ - self.LBR - 1) % MAX_SEQ)
                 data = self.recv_data[:size]
@@ -123,25 +127,27 @@ class TCP:
                 #print 'got data:', data
                 return data
 
-            # If no data and received fin, return None
+            # If no data in buffer and already received fin/rst from server, return None to notify upper application
             if self.fin:
-                break
+                return None
             
             try:
                 pkt = self.IP.recv(self.dip)
+                # If check sum fail, send ack and keep receiving
                 if pkt == None:
                     self.send_ack()
                     continue
-                #pkt = self.IP.recv(10240)
             except Exception as e:
                 continue
             hdr, payload = self._strip_tcp_hdr(pkt)
+            # If check sum fail, send ack and keep receiving
             if hdr is None or payload is None:
                 self.send_ack()
                 continue
+            # If port number is incorrect, keep receiving
             if hdr['sport'] != self.dport or hdr['dport'] != self.sport:
                 continue
-            # if it is ack
+            # If it is ack
             if hdr['flags'] & ACK != 0:
                 # if it is within the send window
                 # print 'ack recevied: ', hdr['ack']
@@ -177,10 +183,11 @@ class TCP:
                 self.fin = True
                 self.lock.release()
                 print 'rqueue: ', len(self.rqueue)
-        return None
+        # time out, received nothing so return empty string
+        return ''
 
-    # send payload, called by application
-    # TODO: if dest_advwmd is 0, then keep calling self.recv() until dest_advwnd is not 0
+    # send payload, called by application.
+    # len(payload) should be smaller than MSS
     def send(self, payload):
         pkt_dict = self._default_hdr()
         pkt_dict['flags'] = (1 << 3) + (1 << 4)
@@ -281,7 +288,6 @@ class TCP:
     def teardown(self):
         self.send_fin()
         while False == self.recv_fin_ack():
-            print 'loop fin'
             self.send_fin()
         self.lock.acquire()
         if self.fin:
@@ -290,7 +296,10 @@ class TCP:
             return
         self.fin = True
         self.lock.release()
-        while True:
+        # Still add a timer here to avoid the very unlucky situation(server not respond anymore and loop forever)
+        # Since we already tear down, so it is OK to ignore the last ACK
+        t = time.time()
+        while time.time() - t < 10:
             p = self.IP.recv(self.dip)
             if p == None:
                 continue
@@ -299,15 +308,11 @@ class TCP:
             if hdr is None or payload is None:
                 continue
             if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
-                if hdr['flags'] & FIN != 0:
-                    self.ack = hdr['seq'] + 1
+                if hdr['flags'] & FIN != 0 or hdr['flags'] & RST != 0:
+                    self.ack = hdr['seq'] + len(payload) + 1
                     self.seq = hdr['ack']
                     self.send_ack()
                     break
-        # if hdr['flags'] & FIN != 0:
-        #     self.ack = hdr['seq'] + 1
-        #     self.send_ack()
-        #     print 'rqueue: ', len(self.rqueue)        
 
     def print_info(self):
         print 'NBE: ' + str(self.NBE)
