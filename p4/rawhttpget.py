@@ -1,6 +1,8 @@
 import argparse
 from tcp import TCP
 import urlparse
+import re
+import time
 
 def parseURL(url):
     u = urlparse.urlparse(url)
@@ -18,33 +20,41 @@ if __name__ == '__main__':
 
     host, uri =  parseURL(args.url)
     print uri
-    
+
+    lenPattern = re.compile(r'Content-Length: ([0-9]+)')
     tcp = TCP(host, uri)
     tcp.handshake()
     tcp.print_info()
-    tcp.send('GET {} HTTP/1.1\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
+    tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
     filename = uri.split('/')[-1]
-    f = open(filename, 'a')
+    f = open(filename, 'w')
     httpEnd = -1
     tot_len = 0
-    while True:
+    length = 0
+    t = time.time()
+    while time.time() - t < 300:
         try:
             tmp = tcp.recv()
         except:
             print 'aaaaaaaaaaaaaaaaaaaaa'
-            break
+            continue
         data += tmp
+        t = time.time()
         if httpEnd == -1:
             httpEnd = data.find('\r\n\r\n')
             if httpEnd != -1:
+                length = lenPattern.search(data[:httpEnd]).group(1)
                 data = data[httpEnd + 4:]
-        elif len(data) > 40960:
-            f.write(data)
-            tot_len += len(data)
-            data = ''
-            print tot_len
+        else:
+            if len(data) > 40960:
+                f.write(data)
+                tot_len += len(data)
+                data = ''
+                print tot_len, length, tot_len + len(data)
+            if tot_len + len(data) == length:
+                break
     tcp.teardown()
     f.write(data)
     tot_len += len(data)

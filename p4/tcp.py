@@ -148,11 +148,6 @@ class TCP:
                     self.cwnd += 1
                     rel = self.slock.release()
 
-            if hdr['flags'] & FIN != 0:
-                self.ack = hdr['seq'] + 1
-                self.send_ack()
-                print 'rqueue: ', len(self.rqueue)
-
             if len(payload) != 0:
                 if hdr['seq'] == self.NBE:
                     self.recv_data += payload
@@ -270,6 +265,23 @@ class TCP:
         while False == self.recv_fin_ack():
             self.send_fin()
         self.fin = True
+        while True:
+            p = self.IP.recv()
+            if p == None:
+                continue
+            # print p
+            hdr, payload = self._strip_tcp_hdr(p)
+            if hdr is None or payload is None:
+                continue
+            if hdr['sport'] == self.dport and hdr['dport'] == self.sport:
+                if hdr['flags'] & FIN != 0:
+                    self.ack = hdr['seq'] + 1
+                    self.send_ack()
+                    break
+        # if hdr['flags'] & FIN != 0:
+        #     self.ack = hdr['seq'] + 1
+        #     self.send_ack()
+        #     print 'rqueue: ', len(self.rqueue)        
 
     def print_info(self):
         print 'NBE: ' + str(self.NBE)
