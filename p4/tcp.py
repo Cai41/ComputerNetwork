@@ -157,7 +157,7 @@ class TCP:
                     self.LAR = hdr['ack']
                     filter_queue = {k: v for k, v in self.squeue.iteritems() if k >= hdr['ack']}
                     self.squeue = filter_queue
-                    self.cwnd += 1
+                    self.cwnd = max(self.cwnd + 1, 1000)
                     rel = self.slock.release()
 
             if len(payload) != 0:
@@ -209,7 +209,8 @@ class TCP:
             self.lock.release()
             acq = self.slock.acquire()
             for seq in self.squeue:
-                if(time.time() - self.squeue[seq][2] > 2.0):
+                if(time.time() - self.squeue[seq][2] > 60.0):
+                    self.cwnd = 1
                     self.squeue[seq] = (self.squeue[seq][0], self.squeue[seq][1], time.time())
                     tcp_hdr = self._build_tcp_hdr(self.squeue[seq][1], self.squeue[seq][0])
                     print 'retrans', seq

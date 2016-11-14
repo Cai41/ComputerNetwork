@@ -7,10 +7,6 @@ import time
 def parseURL(url):
     u = urlparse.urlparse(url)
     path = u.path
-    if u.path == '':
-        path += '/index.html'
-    elif u.path[-1] == '/':
-        path += 'index.html'        
     return u.netloc, path
 
 def run(host, uri):
@@ -23,13 +19,14 @@ def run(host, uri):
         tcp.fin = True
         return
     tcp.print_info()
-    send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
+    send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
+    print send_data
     for s in send_data:
         tcp.send(s)
     # tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''
-    filename = uri.split('/')[-1]
+    filename = uri.split('/')[-1] if uri[-1] != '/' else 'index.html'
     f = open(filename, 'w')
     httpEnd = -1
     tot_len = 0
@@ -54,8 +51,10 @@ def run(host, uri):
                 length = lenPattern.search(data[:httpEnd])
                 header = data[:httpEnd + 4].split()
                 data = data[httpEnd + 4:]
+                print header
                 if (header[1] != '200'):
                     print 'HTTP Response code is not 200, exit'
+                    tcp.fin = True
                     return
         else:
             if len(data) > 40960:
@@ -83,6 +82,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     host, uri =  parseURL(args.url)
+    if uri is '':
+        uri = '/'
     print host, uri
 
     run(host, uri)
