@@ -19,6 +19,7 @@ def run(host, uri):
         tcp.fin = True
         return
     tcp.print_info()
+    # GET request
     send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
     print send_data
     # for s in send_data:
@@ -33,7 +34,7 @@ def run(host, uri):
     tot_len = 0
     length = None
     t = time.time()
-    while time.time() - t < 300:
+    while time.time() - t < 180:
         if tcp.fin: break
         try:
             tmp = tcp.recv()
@@ -47,6 +48,7 @@ def run(host, uri):
         data += tmp
         t = time.time()
         if httpEnd == -1:
+            # this is the first packet, which contains HTTP header
             httpEnd = data.find('\r\n\r\n')
             if httpEnd != -1:
                 length = lenPattern.search(data[:httpEnd])
@@ -72,6 +74,8 @@ def run(host, uri):
     f.close()    
     tot_len += len(data)
     if length is not None:
+        # if we didn't find content-length in response header, server will close
+        # connection (RST) after tranmission is done. No need for TCP teardown.
         tcp.teardown()
     print tot_len
     tcp.print_info()

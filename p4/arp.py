@@ -31,6 +31,7 @@ class Arp:
             ]
         self.arp_packet = ''.join(self.packet_struct)
     def _broadcast(self):
+        """send out a frame with Broadcast MAC as destination"""
         self.local_ip = self.ethernet.local_ip
         self.gateway_ip = self.ethernet.gateway_ip
         self.local_mac = self.ethernet.local_mac
@@ -39,6 +40,7 @@ class Arp:
         self.ethernet.send(self.arp_packet, dest_mac = utils.BCAST_MAC, ptype = utils.ETHERNET_PROTOCOL_TYPE_ARP)
 
     def find_gateway_mac(self):
+        """broad cast then receive response from gateway, extract gateway MAC"""
         while self.ethernet.gateway_mac == None:
             self._broadcast()
             frame = self.ethernet.recv_sock.recv(65536)
