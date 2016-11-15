@@ -78,7 +78,7 @@ def run(host, uri):
         # connection (RST) after tranmission is done. No need for TCP teardown.
         tcp.teardown()
     # print tot_len
-    tcp.print_info()
+    # tcp.print_info()
     print 'Download complete'
 
 if __name__ == '__main__':
@@ -89,6 +89,6 @@ if __name__ == '__main__':
     host, uri =  parseURL(args.url)
     if uri is '':
         uri = '/'
-    print host, uri
+    # print host, uri
 
     run(host, uri)

@@ -25,7 +25,7 @@ class TCP:
         if self.Arp.find_gateway_mac() == None:
             print "ARP failed"
         else:
-            print 'gateway_mac', self.IP.ethernet.gateway_mac
+            # print 'gateway_mac', self.IP.ethernet.gateway_mac
         self.uri = uri
         self.host = host
         # if next packet is to be sent, then its seq should be self.seq
