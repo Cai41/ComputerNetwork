@@ -24,7 +24,7 @@ class TCP:
         self.Arp = Arp(self.IP.ethernet)
         if self.Arp.find_gateway_mac() == None:
             print "ARP failed"
-        else:
+        # else:
             # print 'gateway_mac', self.IP.ethernet.gateway_mac
         self.uri = uri
         self.host = host
