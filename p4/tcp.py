@@ -36,7 +36,11 @@ class TCP:
         self.cwnd = 1
         self.dest_advwnd = 0
         self.sip = self.IP.ethernet.local_ip
-        self.dip = inet_aton(gethostbyname(host))
+        try:
+            self.dip = inet_aton(gethostbyname(host))
+        except:
+            print 'No host found for this IP address'
+            return
         # print 'At TCP, source ip:', inet_ntoa(self.sip)
         # print 'At TCP, dest ip:', inet_ntoa(self.dip)
         # data that haven't been read by application, starting from seq number self.LBR + 1, ending at self.NBE - 1

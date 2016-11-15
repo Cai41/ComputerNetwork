@@ -35,6 +35,7 @@ def run(host, uri):
     length = None
     t = time.time()
     while time.time() - t < 180:
+        # If received FIN from server, then it is done
         if tcp.fin: break
         try:
             tmp = tcp.recv()
@@ -60,6 +61,7 @@ def run(host, uri):
                     tcp.fin = True
                     return
         else:
+            # If buffer is full, flush to file
             if len(data) > 40960:
                 f.write(data)
                 tot_len += len(data)
