@@ -18,15 +18,15 @@ def run(host, uri):
         print 'Can not connect to server'
         tcp.fin = True
         return
-    tcp.print_info()
+    # tcp.print_info()
     # GET request
     send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
-    print send_data
+    # print send_data
     # for s in send_data:
     #     tcp.send(s)
     tcp.send(send_data)
     # tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
-    tcp.print_info()
+    # tcp.print_info()
     data = ''
     filename = uri.split('/')[-1] if uri[-1] != '/' else 'index.html'
     f = open(filename, 'w')
@@ -39,7 +39,7 @@ def run(host, uri):
         try:
             tmp = tcp.recv()
         except:
-            print 'Ethernet timeout'
+            # print 'Ethernet timeout'
             continue
 
         # return None means received FIN/RST from server
@@ -54,7 +54,7 @@ def run(host, uri):
                 length = lenPattern.search(data[:httpEnd])
                 header = data[:httpEnd + 4].split()
                 data = data[httpEnd + 4:]
-                print header
+                # print header
                 if (header[1] != '200'):
                     print 'HTTP Response code is not 200, exit'
                     tcp.fin = True
@@ -64,7 +64,7 @@ def run(host, uri):
                 f.write(data)
                 tot_len += len(data)
                 data = ''
-                print 'Data recieved: ', tot_len
+                # print 'Data recieved: ', tot_len
             # If there is Content-Length in header, the compare data received with it
             if length is not None and tot_len + len(data) == int(length.group(1)):
                 break
@@ -77,9 +77,9 @@ def run(host, uri):
         # if we didn't find content-length in response header, server will close
         # connection (RST) after tranmission is done. No need for TCP teardown.
         tcp.teardown()
-    print tot_len
+    # print tot_len
     tcp.print_info()
-    print 'we are done'
+    print 'Download complete'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog = 'rawHttp')

@@ -71,7 +71,7 @@ class IP:
             segment = packet[20:ip_header_dict['tot_len']]
             #print 'ip header:', ip_header_dict
             return segment
-        print 'ip cksum fail'
+        # print 'ip cksum fail'
         return None
 
 if __name__ == '__main__':

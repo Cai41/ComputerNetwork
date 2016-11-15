@@ -23,13 +23,13 @@ class Ethernet:
         # gateway_ip, local_mac, local_ip, gateway_mac are all binary
         try:
             self.gateway_ip = socket.inet_aton(utils.get_default_gateway_linux())
-            print 'gateway_ip:', socket.inet_ntoa(self.gateway_ip)
+            # print 'gateway_ip:', socket.inet_ntoa(self.gateway_ip)
         except:
             sys.exit()
         self.local_mac= self.send_sock.getsockname()[4]
         self.local_ip = socket.inet_aton(utils.get_local_ip_address('eth0'))
-        print 'local_mac is {}'.format(self.local_mac)
-        print 'local_ip is {}'.format(socket.inet_ntoa(self.local_ip))
+        # print 'local_mac is {}'.format(self.local_mac)
+        # print 'local_ip is {}'.format(socket.inet_ntoa(self.local_ip))
         self.gateway_mac = None
 
     def _build_frame_header(self, dest_mac, ptype =

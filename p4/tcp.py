@@ -37,8 +37,8 @@ class TCP:
         self.dest_advwnd = 0
         self.sip = self.IP.ethernet.local_ip
         self.dip = inet_aton(gethostbyname(host))
-        print 'At TCP, source ip:', inet_ntoa(self.sip)
-        print 'At TCP, dest ip:', inet_ntoa(self.dip)
+        # print 'At TCP, source ip:', inet_ntoa(self.sip)
+        # print 'At TCP, dest ip:', inet_ntoa(self.dip)
         # data that haven't been read by application, starting from seq number self.LBR + 1, ending at self.NBE - 1
         self.recv_data  = ''
         # seqno of last ACK received, changing only when ack is recieved
@@ -87,7 +87,7 @@ class TCP:
         psh = pack('!4s4sBBH', self.sip, self.dip, 0, IPPROTO_TCP, tcp_length)
         cksum_msg = psh + seg
         if utils.checksum(cksum_msg) != 0:
-            print 'cksum fail'
+            # print 'cksum fail'
             return None, None
             
         offset_res = tcp_header_dict['offset_res']
@@ -182,7 +182,7 @@ class TCP:
                 self.lock.acquire()
                 self.fin = True
                 self.lock.release()
-                print 'rqueue: ', len(self.rqueue)
+                # print 'rqueue: ', len(self.rqueue)
         # time out, received nothing so return empty string
         return ''
 
@@ -213,9 +213,9 @@ class TCP:
                     self.cwnd = 1
                     self.squeue[seq] = (self.squeue[seq][0], self.squeue[seq][1], time.time())
                     tcp_hdr = self._build_tcp_hdr(self.squeue[seq][1], self.squeue[seq][0])
-                    print 'retrans', seq
-                    print 'LAR', self.LAR
-                    print 'LBS', self.LBS
+                    # print 'retrans', seq
+                    # print 'LAR', self.LAR
+                    # print 'LBS', self.LBS
                     self.IP.send(tcp_hdr + self.squeue[seq][0], self.dip)
             rel = self.slock.release()
             time.sleep(4.0)
