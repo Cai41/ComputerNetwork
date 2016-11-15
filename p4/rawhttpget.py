@@ -21,8 +21,9 @@ def run(host, uri):
     tcp.print_info()
     send_data = 'GET {} HTTP/1.0\r\nHost: {}\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.97 Safari/537.11\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host)
     print send_data
-    for s in send_data:
-        tcp.send(s)
+    # for s in send_data:
+    #     tcp.send(s)
+    tcp.send(send_data)
     # tcp.send('GET {} HTTP/1.0\r\nHost: {}\r\nConnection: keep-alive\r\n\r\n'.format(tcp.uri, tcp.host))
     tcp.print_info()
     data = ''

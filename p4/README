@@ -1,34 +1,58 @@
+We did the extra credit part for this assignment.
+
 1. High-level approach:
-We have three layers:Ethernet layer, IP layer, TCP layer and raw socket layer. The relationship is as follows:
-tcp.recv() -> ip.recv() -> ethernet.recv()
-tcp.send() -> ip.send() -> ethernet.send()
-utils.py: checksu function
-ethernet: build Ethernet frames
+Below HTTP, we have three layers: Data-Link (Ethernet) layer, IP layer, TCP layer. 
+The relationship is as follows:
+
+TCP.recv() -> IP.recv() -> Ethernet.recv()
+TCP.send() -> IP.send() -> Ethernet.send()
+
+Included in this folder are the files:
+utils.py: provides utility functions like checksum(), get_local_ip() as well as
+        constants that are used throughout the program.
+ethernet: data-link layer, create send and recv raw sockets here
 ip.py: implementation of IP protocol
 tcp.py: implementation of TCP protocol
-Arp.py: arp protocol:
-rawhttp.py: download files according to url through tcp protocol
+arp.py: ARP protocol:
+rawhttpget.py: parse URL, build HTTP header, send request and download data
+        using TCP/IP stack we built.
 
-2. Featrues implemented on all layers
-(1).The ethernet layer add/extract headers from frame, and send/receive frame.
-(2).The ip layer use ethernet layer to send/receive packet, add/extract headers from packet. Vertify source ip address
-as well as destination address. Also it checks whether checksum is correct for incoming packet and set correct checksum
-value for outgoing packet.
-(3).The TCP layer use ip layer to send/receive packet, add/extract headers from segment.
-For sending side, it implement basic sliding window algorithm: congestion window is used to control the packets on-the-fly,
-each time a packet is dropped or timeout, send congestion window to 1, each time an ACK is received increment the window
-size which is limited to 1000. For each packet that is not acked within 60 seconds, it is re-transmitted.
-For receiving side, we also manage the advertise window in case of the receiver falling behind. We have the maximum buffer of
-65535 bytes. If any out-of-order packet is arrived we buffer it until all the packets before it has been received.
-(4).The rawsocket send http request by TCP, and receive data from TCP, buffer it while writing to file.
+2. Features implemented in each layer:
+(1) The Data-Link (Ethernet) layer create sockets, add/extract headers from frame, 
+and send/receive frame. We filter out frames that are not sent to our MAC and
+that are not of type IP. (ARP packets are not received through Ethernet.recv)
+(2) The IP layer use ethernet layer to send/receive packet, add/extract headers 
+from packet. Vertify source ip address as well as destination address. Also it 
+checks whether checksum is correct for incoming packet and set correct checksum
+value for outgoing packet. We filter out UDP packets here.
+(3) The TCP layer use ip layer to send/receive packet, add/extract headers from 
+segment.
+For sending side, it implement basic sliding window algorithm: congestion window is
+used to control the packets on-the-fly, each time a packet is dropped or timeout,
+ set congestion window to 1, each time an ACK is received increment the window
+size by 1 which has a maximum of 1000. For each packet that is not acked within 60
+ seconds, it is re-transmitted.
+For receiving side, we also manage the advertise window in case the receiver 
+falls behind. We have the maximum buffer of 65535 bytes. If any out-of-order 
+packet arrives we buffer it until all the packets before it has been received.
 
 3.Challenges:
-(1).ARP
-(2).TCP sliding window:
-(3).check sum function
+(1) We started with HTTP 1.1 but a dechunker for chunked transfer encoding is
+too much work for our current setup, in the end we decided to go with HTTP 1.0.
+(2) TCP sliding window. We want to make our code close to how it actually works
+in the Linux kernel, which added some challenges.
+(3) We had some trouble figuring out the correspondance between endianess and
+the algorithm used for calculating the checksum. The checksums we calculated for
+IP were correct but wrong for TCP. Wireshark don't check TCP checksums, so it
+took us a while to find that bug.
 
 
 4.Test:
-(1).tcp.handshake will try connect to server, if failer it would print a message and return
-(2).After receving HTTP reponse, if it is 200, then program will return and print an error.
-(3).If no data is received within 300 seconds, the program print a warning and return.
+We tested our code by downloading HTML files as well as the big files provided
+and compare their md5sum and cksum.
+(1) tcp.handshake will try connect to server, if failer it would print a message 
+and return
+(2) After receving HTTP reponse, if it is not 200, then program will return and 
+print an error.
+(3) If no data is received within 180 seconds, the program prints a warning and 
+returns.
