@@ -1,16 +1,42 @@
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-import urllib2
+import os
+import urllib
 import argparse
+
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path not in self.server.cache:
-            path = 'http://' + self.server.origin + ':8080'+ self.path
-            print path
-            self.server.cache['path'] = urllib2.urlopen(path).read()
-        self.send_response(200)
-        self.send_header('Content-Type', 'text/html')
-        self.end_headers()
-        self.wfile.write(self.server.cache['path'])
+        osPath = self._pathToFile(self.path)
+        cached = False
+        content = ''
+        if os.path.isfile(osPath):
+            content = open(osPath).read()
+            cached = True
+        elif self.path in self.server.cache:
+            content = self.server.cache[self.path]
+            cached = True
+
+        if cached:
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+            self.wfile.write(content)
+        else:
+            reqPath = 'http://' + self.server.origin + ':8080'+ self.path
+            print reqPath
+            f = urllib.urlopen(reqPath)
+            if f.getcode() == 200:
+                self.server.cache[self.path] = f.read()
+            self.send_response(f.getcode())
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+            self.wfile.write(f.read())
+        
+
+    def _pathToFile(self, path):
+        if path == '/':
+            return os.curdir + '/index.html'
+        else:
+            return os.curdir + 'path'
 
 class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
@@ -23,6 +49,5 @@ if __name__ == "__main__":
     parser.add_argument('-p', metavar='port', dest = 'port', help='port number.')
     parser.add_argument('-o', dest='origin', help='origin server')
     args = parser.parse_args()
-    print args
     server = WebServer(('', int(args.port)), WebHandler, args.origin)
     server.serve_forever()
