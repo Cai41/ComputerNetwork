@@ -1,13 +1,13 @@
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from BaseHTTPServer import *
+from urllib2 import *
 import os
-import urllib
 import argparse
 
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         osPath = self._pathToFile(self.path)
         cached = False
-        content = ''
+        content = None
         if os.path.isfile(osPath):
             content = open(osPath).read()
             cached = True
@@ -24,12 +24,21 @@ class WebHandler(BaseHTTPRequestHandler):
         else:
             reqPath = 'http://' + self.server.origin + ':8080'+ self.path
             print reqPath
-            f = urllib.urlopen(reqPath)
+            try:
+                f = urlopen(reqPath)
+            except HTTPError as e:
+                print e.code, e.reason
+                self.send_error(e.code, e.reason)
+                return
+            except URLError as e:
+                print e
+                return
             content = f.read()
             if f.getcode() == 200:
                 self.server.cache[self.path] = content
             self.send_response(f.getcode())
-            self.send_header('Content-Type', 'text/html')
+            for k in f.headers:
+                self.send_header(k, f.headers[k])
             self.end_headers()
             self.wfile.write(content)
         
