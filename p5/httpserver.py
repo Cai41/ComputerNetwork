@@ -37,8 +37,7 @@ class WebHandler(BaseHTTPRequestHandler):
             if f.getcode() == 200:
                 self.server.cache[self.path] = content
             self.send_response(f.getcode())
-            for k in f.headers:
-                self.send_header(k, f.headers[k])
+            self.send_header('Content-Type', 'text/html')            
             self.end_headers()
             self.wfile.write(content)
         
