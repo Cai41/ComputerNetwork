@@ -41,7 +41,6 @@ class WebHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(content)
         
-
     def _pathToFile(self, path):
         if path == '/':
             return os.curdir + '/index.html'

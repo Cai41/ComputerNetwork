@@ -1,0 +1,26 @@
+1.High-level approach:
+We completed the basic http server and DNS server.
+(1). For http server, after it receives request, it examine whether the path is cached or in the file, if
+the request path is cached then it is directly returned to client; otherwise, the server would fetch data
+from origin, caching it and send back to client.
+(2). For DNS server, it just always return the address of one web server. After we complete the CDN mapping
+function, we would add it to DNS funcitonality.
+
+2.Performance enhancing:
+Since we are only building basic http server and DNS server, there is few performance enhancing except that
+http server caches all the pages. We also cache HTTP redirection.
+
+3.Challengs:
+(1).Building DNS server needs to know DNS packet format and meaning of each field in the packet. Also, since
+the length of DNS Query is not fixed, it is a little bit hard to separate each question or addtional records
+from packet.
+(2).It is trade-off whether we cache HTTP redirection in web server and return it to client. We decide that
+after receving HTTP redirection(code 301/302), we perform redirect at web server, cache the final page and
+return it to client.
+
+4.Next steps:
+(1).Build CDN, add function to DNS server to return the best ip address to the client. Maybe we'll try serveral
+approaches, measure their performance and choose the one that we think is the best.
+(2).Optimize cache strategy, since there is limited space in server. We may use LRU algorithm to improve the
+performance.
+(3).deploy/run/stop scripts that automatically configure all the servers.
