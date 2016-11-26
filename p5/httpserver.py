@@ -16,6 +16,7 @@ class WebHandler(BaseHTTPRequestHandler):
             cached = True
 
         if cached:
+            print 'cache found'
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
@@ -24,12 +25,13 @@ class WebHandler(BaseHTTPRequestHandler):
             reqPath = 'http://' + self.server.origin + ':8080'+ self.path
             print reqPath
             f = urllib.urlopen(reqPath)
+            content = f.read()
             if f.getcode() == 200:
-                self.server.cache[self.path] = f.read()
+                self.server.cache[self.path] = content
             self.send_response(f.getcode())
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            self.wfile.write(f.read())
+            self.wfile.write(content)
         
 
     def _pathToFile(self, path):
