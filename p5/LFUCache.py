@@ -8,6 +8,8 @@ class DoubleList:
     def __init__(self):
         self.head = Node(None)
         self.tail = Node(None)
+        self.head.next = self.tail
+        self.tail.prev = self.head
         self.size = 0
 
     # insert before dummy tail
@@ -36,20 +38,24 @@ class DoubleList:
         self.size -= 1
         return n
 
-# a frequency node, self.item(freq) is the frequency, self.itemList is the
+# a frequency node, self.item(freq) is the frequency, self.itemsList is the
 # list of all the items that has the frequency freq
 class FreqNode(Node):
     def __init__(self, freq):
-        Node.__init__(freq)
+        Node.__init__(self, freq)
         self.itemsList = DoubleList()
 
     # append a new node
     def add(self, n):
-        self.itemList.insert(n)
+        self.itemsList.add(n)
 
+    # remvoe a node n
+    def remove(self, n):
+        return self.itemsList.remove(n)
+    
     # remove last node
     def removeLast(self):
-        return self.itemList.removeLast()
+        return self.itemsList.removeLast()
 
 # Cache maps key to the LfuItem
 # self.parent is the its FreqNode, self.node is corresponding node with that key,
@@ -64,7 +70,7 @@ class LfuItem:
 class Cache:
     def __init__(self, capacity):
         self.capacity = capacity
-        self.mapping = {}
+        self.mappings = {}
         self.freqList = DoubleList()
 
     # whether cache has the key
@@ -90,7 +96,7 @@ class Cache:
     def access(self, key):
         if key not in self.mappings:
             return None
-        parent, node, item = self.mappings[key].parent, self.mappings[key].node, self.mappings[key].item
+        parent, node, item = self.mappings[key].parent, self.mappings[key].node, self.mappings[key].value
         parent_next = parent.next
         # increase frequency by 1
         if parent_next.item != parent.item + 1:
@@ -114,3 +120,25 @@ class Cache:
         if first.itemsList.size == 0:
             self.freqList.remove(first)
         del self.mappings[tmp.item]
+
+    def print_info(self):
+        n = self.freqList.head.next
+        while n.item is not None:
+            print str(n.item) + ': ',
+            i = n.itemsList.head.next
+            while i.item is not None:
+                print i.item, self.mappings[i.item].value,
+                i = i.next
+            n = n.next
+            print
+
+if __name__ == '__main__':
+    cache = Cache(100)
+    cache.insert(1,'x')
+    cache.insert(2,'y')
+    cache.print_info()
+    print cache.access(1)
+    cache.print_info()
+    print cache.access(2)
+    print cache.access(2)    
+    cache.print_info()
