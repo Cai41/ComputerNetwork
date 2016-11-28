@@ -88,14 +88,13 @@ class Cache:
         if key in self.mappings:
             return False
 
-        # if val's size is even large than capacity, return false because we can't cache it
+        # if val's size is too large, return false because we can't cache it
         if len(val) >= self.cap:
             return False
         
         # while total size is too large, keep deleting lfu item from cache
         self.size += len(val)
         while self.size >= self.cap:
-            self.size -= self._getLfuSize()
             self.remove()
             
         # If the smallest frequency in cache is not 1, then make new FreqNode with 1
@@ -174,6 +173,8 @@ if __name__ == '__main__':
     cache.insert(3,'z')
     cache.insert(4,'a')
     cache.print_info()        
-    cache.insert(5,'abc')    
+    cache.insert(5,'abc')
     cache.print_info()    
-    print cache.containsKey(3)    
+    print cache.containsKey(3)
+    cache.insert(6,'k')
+    cache.print_info()    
