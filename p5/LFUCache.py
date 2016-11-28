@@ -57,6 +57,10 @@ class FreqNode(Node):
     def removeLast(self):
         return self.itemsList.removeLast()
 
+    # return the last element
+    def getLast(self):
+        return self.itemsList.tail.prev
+
 # Cache maps key to the LfuItem
 # self.parent is the its FreqNode, self.node is corresponding node with that key,
 # self.item is the value corresponding to that key
@@ -69,9 +73,10 @@ class LfuItem:
 # cache.mappings maps key to a LfuItem, cache.freqList is a list of FreqNode
 class Cache:
     def __init__(self, capacity):
-        self.capacity = capacity
+        self.cap = capacity
         self.mappings = {}
         self.freqList = DoubleList()
+        self.size = 0
 
     # whether cache has the key
     def containsKey(self, key):
@@ -79,10 +84,22 @@ class Cache:
 
     # insert a (key, val) to cache with frequency = 1
     def insert(self, key, val):
+        # if we already cache it, return false
         if key in self.mappings:
             return False
-        first = self.freqList.head.next
+
+        # if val's size is even large than capacity, return false because we can't cache it
+        if len(val) >= self.cap:
+            return False
+        
+        # while total size is too large, keep deleting lfu item from cache
+        self.size += len(val)
+        while self.size >= self.cap:
+            self.size -= self._getLfuSize()
+            self.remove()
+            
         # If the smallest frequency in cache is not 1, then make new FreqNode with 1
+        first = self.freqList.head.next        
         if first.item != 1:
             freqOfOne = FreqNode(1)
             first = self.freqList.insert(freqOfOne, self.freqList.head, first)
@@ -98,17 +115,21 @@ class Cache:
             return None
         parent, node, item = self.mappings[key].parent, self.mappings[key].node, self.mappings[key].value
         parent_next = parent.next
+        
         # increase frequency by 1
         if parent_next.item != parent.item + 1:
             inc = FreqNode(parent.item + 1)
             parent_next = self.freqList.insert(inc, parent, parent_next)
+
         # remove the node under old frequency, add it to new FreqNode
         parent.remove(node)
         parent_next.add(node)
         self.mappings[key].parent = parent_next
+        
         # if no node left under old frequency, delete theat FreqNode
         if parent.itemsList.size == 0:
             self.freqList.remove(parent)
+        print 'access [' + str(key) + ', ' + str(item) + ']'
         return item
 
     # remove the least frequent node
@@ -116,29 +137,43 @@ class Cache:
         first = self.freqList.head.next
         if first.item is None: return
         tmp = first.removeLast()
+        self.size -= len(self.mappings[tmp.item].value)
         # if no node left under old frequency, delete theat FreqNode
         if first.itemsList.size == 0:
             self.freqList.remove(first)
         del self.mappings[tmp.item]
 
+    # get the lfu item's size
+    def _getLfuSize(self):
+        first = self.freqList.head.next
+        if first.item is None: return 0
+        return len(self.mappings[first.getLast().item].value)
+        
     def print_info(self):
         n = self.freqList.head.next
+        print 'size :' + str(self.size)
         while n.item is not None:
-            print str(n.item) + ': ',
+            print 'freq of ' + str(n.item) + ': ',
             i = n.itemsList.head.next
             while i.item is not None:
-                print i.item, self.mappings[i.item].value,
+                print '[' + str(i.item) + ', ' + str(self.mappings[i.item].value) + ']',
                 i = i.next
             n = n.next
             print
 
 if __name__ == '__main__':
-    cache = Cache(100)
+    cache = Cache(5)
     cache.insert(1,'x')
     cache.insert(2,'y')
     cache.print_info()
-    print cache.access(1)
+    cache.access(1)
     cache.print_info()
-    print cache.access(2)
-    print cache.access(2)    
+    cache.access(2)
+    cache.access(2)    
     cache.print_info()
+    cache.insert(3,'z')
+    cache.insert(4,'a')
+    cache.print_info()        
+    cache.insert(5,'abc')    
+    cache.print_info()    
+    print cache.containsKey(3)    
