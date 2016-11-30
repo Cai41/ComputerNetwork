@@ -2,6 +2,7 @@ import SocketServer
 import argparse
 import socket
 import struct
+from threading import *
 
 """
 DNS Message Header:
@@ -75,10 +76,31 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         res += '\x00'
         return res
 
+class myServer(SocketServer.UDPServer):
+    def __init__(self, addr, handler):
+        SocketServer.UDPServer.__init__(self, addr, handler)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(('', 55555))
+        self.sock.listen(1)
+        self.rtt = {}
+        Thread(target = self._accept_rtt).start()
+
+    def _accept_rtt(self):
+        while True:
+            conn, addr = self.sock.accept()
+            data = conn.recv(4096).split()
+            print data
+            if data[0] in self.rtt:
+                self.rtt[data[0]].append((data[1], addr))
+            else:
+                self.rtt[data[0]] = [(data[1], addr)]
+            print self.rtt
+            conn.close()
+            
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="client")
     parser.add_argument('-p', metavar='port', dest = 'port', help='port number.')
     parser.add_argument('-n', dest='name', help='name to be translated')
     args = parser.parse_args()
-    server = SocketServer.UDPServer(('', int(args.port)), DNSHandler)
+    server = myServer(('', int(args.port)), DNSHandler)
     server.serve_forever()
