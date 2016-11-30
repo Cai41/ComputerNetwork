@@ -1,7 +1,9 @@
 from BaseHTTPServer import *
 from urllib2 import *
+from subprocess import *
 import os
 import argparse
+import re
 
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -40,6 +42,10 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/html')            
             self.end_headers()
             self.wfile.write(content)
+        output = Popen(['ss', '-i', 'dst' , self.client_address[0]], stdout = PIPE).communicate()[0]
+        rtt = self.server.p.search(output).group(1)
+        self.server.rtt[self.client_address[0]] = rtt
+        print rtt
         
     def _pathToFile(self, path):
         if path == '/':
@@ -52,6 +58,8 @@ class WebServer(HTTPServer):
         HTTPServer.__init__(self, address, handler)
         self.origin = origin
         self.cache = {}
+        self.p = re.compile('rtt:([^\s]+)')
+        self.rtt = {}
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="client")

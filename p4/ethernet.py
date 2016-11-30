@@ -17,7 +17,7 @@ class Ethernet:
                 print "Need sudo!"
             sys.exit()
 
-        self.send_sock.bind(('eth0', 0))
+        self.send_sock.bind(('wlp5s0', 0))
         self.recv_sock.settimeout(5.0)
 
         # gateway_ip, local_mac, local_ip, gateway_mac are all binary
@@ -27,7 +27,7 @@ class Ethernet:
         except:
             sys.exit()
         self.local_mac= self.send_sock.getsockname()[4]
-        self.local_ip = socket.inet_aton(utils.get_local_ip_address('eth0'))
+        self.local_ip = socket.inet_aton(utils.get_local_ip_address('wlp5s0'))
         # print 'local_mac is {}'.format(self.local_mac)
         # print 'local_ip is {}'.format(socket.inet_ntoa(self.local_ip))
         self.gateway_mac = None
