@@ -18,30 +18,52 @@ DNS Message Header:
 
 """
 
-hosts = [('ec2-54-167-4-20.compute-1.amazonaws.com',None),
-         ('ec2-54-210-1-206.compute-1.amazonaws.com',None)]
+hosts = [('ec2-54-167-4-20.compute-1.amazonaws.com', None),
+         ('ec2-54-210-1-206.compute-1.amazonaws.com', None),
+         ('ec2-54-67-25-76.us-west-1.compute.amazonaws.com', None),
+         ('ec2-35-161-203-105.us-west-2.compute.amazonaws.com', None),
+         ('ec2-52-213-13-179.eu-west-1.compute.amazonaws.com', None),
+         ('ec2-52-196-161-198.ap-northeast-1.compute.amazonaws.com', None),
+         ('ec2-54-255-148-115.ap-southeast-1.compute.amazonaws.com', None),
+         ('ec2-13-54-30-86.ap-southeast-2.compute.amazonaws.com', None),
+         ('ec2-52-67-177-90.sa-east-1.compute.amazonaws.com', None),
+         ('ec2-35-156-54-135.eu-central-1.compute.amazonaws.com', None)]
 
 dns_fmt = ['id', 'flags', 'qscount', 'ancount', 'nscount', 'adcount']
 record_fmt = ['name', 'type', 'class', 'ttl', 'len', 'rdata']
 
 for i in range(len(hosts)):
-    hosts[i] = (hosts[i][0], socket.inet_aton(socket.gethostbyname(hosts[i][0])))
+    hosts[i] = (hosts[i][0], socket.gethostbyname(hosts[i][0]))
     
 class DNSHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         dnsHeader, data = self._stripDNSHeader(self.request[0])
         sock = self.request[1]
-
+        print sock
         query, restData = self._extractQuery(data)
 
         ansHdr = self._hdrDict(dnsHeader['id'])
-        recDict = self._recDict(self._encodeName('cs5700cdnproject.ccs.neu.edu'), hosts[0][1])
+        print self.client_address
+        recDict = self._recDict(self._encodeName('cs5700cdnproject.ccs.neu.edu'), self._select_best(self.client_address[0]))
         ansHdr['flags'] = 1 << 15
 
         sendData = self._buildHdr(ansHdr) + query + self._buildRec(recDict)
         # print ':'.join(x.encode('hex') for x in sendData)
         sock.sendto(sendData, self.client_address)
 
+    def _select_best(self, clientIP):
+        res = hosts[0][1]
+        if clientIP in self.server.rtt and len(self.server.rtt[clientIP]) < len(hosts):
+            for h in hosts:
+                if h[1] not in self.server.rtt[clientIP]:
+                    res = h
+                if h[1] in self.server.rtt[clientIP]:
+                    print 'recorded'
+        elif clientIP in self.server.rtt:
+            res =  min(self.server.rtt[clientIP], key = self.server.rtt[clientIP].get)
+        print res
+        return socket.inet_aton(res)
+        
     def _stripDNSHeader(self, data):
         header = struct.unpack('!HHHHHH', data[:12])
         header_dict = dict(zip(dns_fmt, header))
@@ -79,23 +101,23 @@ class DNSHandler(SocketServer.BaseRequestHandler):
 class myServer(SocketServer.UDPServer):
     def __init__(self, addr, handler):
         SocketServer.UDPServer.__init__(self, addr, handler)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', 55555))
-        self.sock.listen(1)
         self.rtt = {}
         Thread(target = self._accept_rtt).start()
 
     def _accept_rtt(self):
         while True:
-            conn, addr = self.sock.accept()
-            data = conn.recv(4096).split()
+            data, addr = self.sock.recvfrom(1024)
+            data = data.split()
             print data
-            if data[0] in self.rtt:
-                self.rtt[data[0]].append((data[1], addr))
+            if data[0] not in self.rtt:
+                self.rtt[data[0]] = {}
+            if addr not in self.rtt[data[0]]:
+                self.rtt[data[0]][addr] = eval(data[1])
             else:
-                self.rtt[data[0]] = [(data[1], addr)]
+                self.rtt[data[0]][addr] = 0.5*self.rtt[data[0]][addr] + 0.5*eval(data[1])
             print self.rtt
-            conn.close()
             
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="client")

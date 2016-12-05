@@ -44,12 +44,9 @@ class WebHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(content)
         output = Popen(['ss', '-i', 'dst' , self.client_address[0]], stdout = PIPE).communicate()[0]
-        rtt = self.server.p.search(output).group(1)
-        self.server.sock.connect(('cs5700cdnproject.ccs.neu.edu', 55555))        
-        self.server.sock.sendall(str(self.client_address[0]) + ' ' + str(rtt))
+        rtt = self.server.p.search(output).group(1).split('/')[0]
+        self.server.sock.sendto(str(self.client_address[0]) + ' ' + str(rtt), ('cs5700cdnproject.ccs.neu.edu', 55555))
         self.server.rtt[self.client_address[0]] = rtt
-        self.server.sock.close()
-        self.server.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print rtt
         
     def _pathToFile(self, path):
@@ -64,7 +61,7 @@ class WebServer(HTTPServer):
         self.origin = origin
         self.cache = {}
         self.p = re.compile('rtt:([^\s]+)')
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rtt = {}
         
 if __name__ == "__main__":
