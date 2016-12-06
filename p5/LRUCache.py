@@ -46,6 +46,9 @@ class Cache:
         self.mappings = {}
         self.size = 0
 
+    def contains(self, key):
+        return key in self.mappings
+    
     def get(self, key):
         if key not in self.mappings: return None
         n = self.mappings[key]

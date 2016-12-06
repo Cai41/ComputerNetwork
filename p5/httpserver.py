@@ -5,6 +5,7 @@ import os
 import argparse
 import re
 import socket
+import LRUCache
 
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -14,8 +15,8 @@ class WebHandler(BaseHTTPRequestHandler):
         if os.path.isfile(osPath):
             content = open(osPath).read()
             cached = True
-        elif self.path in self.server.cache:
-            content = self.server.cache[self.path]
+        elif self.server.cache.contains(self.path):
+            content = self.server.cache.get(self.path)
             cached = True
 
         if cached:
@@ -38,7 +39,7 @@ class WebHandler(BaseHTTPRequestHandler):
                 return
             content = f.read()
             if f.getcode() == 200:
-                self.server.cache[self.path] = content
+                self.server.cache.insert(self.path, content)
             self.send_response(f.getcode())
             self.send_header('Content-Type', 'text/html')            
             self.end_headers()
@@ -59,7 +60,7 @@ class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
         HTTPServer.__init__(self, address, handler)
         self.origin = origin
-        self.cache = {}
+        self.cache = LRUCache.Cache(8*1024*1024)
         self.p = re.compile('rtt:([^\s]+)')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rtt = {}
