@@ -53,10 +53,14 @@ class DNSHandler(SocketServer.BaseRequestHandler):
 
     def _select_best(self, clientIP):
         res = hosts[0][1]
+        print clientIP
+        print self.server.rtt
         if clientIP in self.server.rtt and len(self.server.rtt[clientIP]) < len(hosts):
+            print 'client meet before'
             for h in hosts:
+                print h
                 if h[1] not in self.server.rtt[clientIP]:
-                    res = h
+                    res = h[1]
                 if h[1] in self.server.rtt[clientIP]:
                     print 'recorded'
         elif clientIP in self.server.rtt:
@@ -113,10 +117,10 @@ class myServer(SocketServer.UDPServer):
             print data
             if data[0] not in self.rtt:
                 self.rtt[data[0]] = {}
-            if addr not in self.rtt[data[0]]:
-                self.rtt[data[0]][addr] = eval(data[1])
+            if addr[0] not in self.rtt[data[0]]:
+                self.rtt[data[0]][addr[0]] = eval(data[1])
             else:
-                self.rtt[data[0]][addr] = 0.5*self.rtt[data[0]][addr] + 0.5*eval(data[1])
+                self.rtt[data[0]][addr[0]] = 0.5*self.rtt[data[0]][addr[0]] + 0.5*eval(data[1])
             print self.rtt
             
 if __name__ == "__main__":
