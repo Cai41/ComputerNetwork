@@ -1,3 +1,5 @@
+import os
+
 class Node:
     def __init__(self, key, value):
         self.key = key
@@ -46,6 +48,7 @@ class Cache:
         self.mappings = {}
         self.size = 0
         self.count = 0
+        self.removeList = []
         
     def contains(self, key):
         return key in self.mappings
@@ -77,19 +80,29 @@ class Cache:
             n = self.items.removeLast()
             self.size -= len(n.value)
             del self.mappings[n.key]
+            self.removeList.append(n.key)
 
         self.count += 1
-        if self.count >= 20:
+        if self.count >= 1:
             self.flush()
             self.count = 0
 
         return True
 
-    def flush():
+    def flush(self):
+        for fname in self.removeList:
+            fpath = self._pathToFile(fname)
+            try:
+                os.remove(fpath)
+            except Exception as e:
+                print e
+                pass
+        self.removeList = []
+        
         for fname in self.mappings:
             fpath = self._pathToFile(fname)
-            fdir = os.dirname(fpath)
-            if not os.path.isdir(fdir):
+            fdir = os.path.dirname(fpath)
+            if fdir != '' and not os.path.isdir(fdir):
                 os.makedirs(fdir)
             f = open(fpath, 'w')
             f.write(self.mappings[fname].value)
@@ -111,19 +124,18 @@ class Cache:
     
 if __name__ == '__main__':
     cache = Cache(5)
-    cache.insert(1,'x')
-    cache.insert(2,'y')
+    cache.insert('a/b/c','x')
+    cache.insert('k/d','y')
     cache.print_info()
-    cache.get(1)
+    cache.get('a/b/c')
     cache.print_info()
-    cache.get(2)
-    cache.get(2)    
+    cache.get('k/d')
     cache.print_info()
-    cache.insert(3,'z')
-    cache.insert(4,'a')
+    cache.insert('a/b/e','z')
+    cache.insert('k/qq','a')
     cache.print_info()        
-    cache.insert(5,'abc')
+    cache.insert('k/qq','abc')
     cache.print_info()
-    cache.insert(6,'k')
+    cache.insert('pp','k')
     cache.print_info()    
     
