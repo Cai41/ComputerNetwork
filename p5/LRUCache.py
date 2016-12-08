@@ -45,7 +45,8 @@ class Cache:
         self.items = DoubleList()
         self.mappings = {}
         self.size = 0
-
+        self.count = 0
+        
     def contains(self, key):
         return key in self.mappings
     
@@ -75,10 +76,31 @@ class Cache:
         while self.size >= self.cap:
             n = self.items.removeLast()
             self.size -= len(n.value)
-            del self.mappings[n.key]            
+            del self.mappings[n.key]
+
+        self.count += 1
+        if self.count >= 20:
+            self.flush()
+            self.count = 0
 
         return True
 
+    def flush():
+        for fname in self.mappings:
+            fpath = self._pathToFile(fname)
+            fdir = os.dirname(fpath)
+            if not os.path.isdir(fdir):
+                os.makedirs(fdir)
+            f = open(fpath, 'w')
+            f.write(self.mappings[fname].value)
+
+
+    def _pathToFile(self, path):
+        if path == '/':
+            return os.curdir + '/index.html'
+        else:
+            return os.curdir + path
+        
     def print_info(self):
         n = self.items.head.next
         while n.key is not None:

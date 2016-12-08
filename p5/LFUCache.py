@@ -29,6 +29,10 @@ class DoubleList:
     def removeLast(self):
         return self.remove(self.tail.prev)
 
+    # remove first node
+    def removeFirst(self):
+        return self.remove(self.head.next)    
+
     # remove node n
     def remove(self, n):
         if n is self.head or n is self.tail:
@@ -56,6 +60,10 @@ class FreqNode(Node):
     # remove last node
     def removeLast(self):
         return self.itemsList.removeLast()
+
+    # remove first node
+    def removeFirst(self):
+        return self.itemsList.removeFirst()    
 
     # return the last element
     def getLast(self):

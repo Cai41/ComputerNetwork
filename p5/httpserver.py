@@ -54,7 +54,7 @@ class WebHandler(BaseHTTPRequestHandler):
         if path == '/':
             return os.curdir + '/index.html'
         else:
-            return os.curdir + 'path'
+            return os.curdir + path
 
 class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
