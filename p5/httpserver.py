@@ -9,10 +9,22 @@ import LRUCache
 
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        self.server.total += 1
         osPath = self._pathToFile(self.path)
         content = None
-        if self.server.cache.contains(self.path):
+        # If cached or we know that it will return 404
+        if os.path.isfile(osPath):
+            self.server.hit += 1
+            print 'hit in disk!'
+            content = open(osPath).read()        
+        elif self.server.cache.contains(self.path):
+            self.server.hit += 1
+            print 'hit in memory!'
             content = self.server.cache.get(self.path)
+        elif self.path in self.server.cache.notFound:
+            self.server.hit += 1
+            self.send_error(e.code)
+            return
 
         if content is not None:
             print 'cache found'
@@ -44,6 +56,7 @@ class WebHandler(BaseHTTPRequestHandler):
         self.server.sock.sendto(str(self.client_address[0]) + ' ' + str(rtt), ('cs5700cdnproject.ccs.neu.edu', 55555))
         self.server.rtt[self.client_address[0]] = rtt
         print rtt
+        print 'hit rate:',str(self.server.hit*1.0/self.server.total)
         
     def _pathToFile(self, path):
         if path == '/':
@@ -55,10 +68,12 @@ class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
         HTTPServer.__init__(self, address, handler)
         self.origin = origin
-        self.cache = LRUCache.Cache(3*1024*1024)
+        self.cache = LRUCache.Cache(8*1024*1024)
         self.p = re.compile('rtt:([^\s]+)')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rtt = {}
+        self.total = 0
+        self.hit = 0
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="client")

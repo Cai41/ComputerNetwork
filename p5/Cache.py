@@ -48,8 +48,18 @@ class Cache:
         self.items = DoubleList()
         self.mappings = {}
         self.size = 0
-        self.flushCt = 0
-        self.removeList = []
+        # self.flushCt = 0
+        # self.removeList = []
+
+        # set of frequent urls that will return 404
+        self.notFound = set([])
+        f = open('notFound', 'r')
+        lines = f.read().splitlines()
+        for l in lines:
+            self.notFound.add(l)
+        f.close()
+
+        # initialize cache based on files on disk
         for subdir, dirs, files in os.walk(os.getcwd()+'/data/'):
             for file in files:
                 fname = os.path.join(subdir, file)
@@ -62,6 +72,7 @@ class Cache:
                 self.insert(fname[fname.find('/data/')+6:], content)
                 print 'size:'+str(self.size)
         self.initialized = True
+        self.print_info()
         
     def contains(self, key):
         return key in self.mappings
@@ -71,22 +82,20 @@ class Cache:
         n = self.mappings[key]
         n = self.items.remove(n)
         self.items.add(n)
-        self.print_info()        
         return n.value
 
     def insert(self, key, value):
         # if val's size is too large, return false because we can't cache it
         if len(value) >= self.cap:
             return False
-        
-        print self.size
+
         if key in self.mappings:
             n = self.items.remove(self.mappings[key])
             self.size = self.size - len(n.value) + len(value)
             n.value = value
         else:
             self.size += len(value)
-            self.mappings[key] = Node(key, value)
+            self.mappings[key] = Node(key, value)        
 
         n = self.mappings[key]
         self.items.add(n)
@@ -95,40 +104,40 @@ class Cache:
             n = self.items.removeLast()
             self.size -= len(n.value)
             del self.mappings[n.key]
-            self.removeList.append(n.key)
+            # self.removeList.append(n.key)
 
-        self.flushCt += 1
-        if self.flushCt >= 5:
-            self.flush()
-            self.flushCt = 0
+        # self.flushCt += 1
+        # if self.flushCt >= 5:
+        #     self.flush()
+        #     self.flushCt = 0
             
         self.print_info()
         return True
 
-    def flush(self):
-        if not self.initialized:
-            return
-        print 'flushing'
-        for fname in self.removeList:
-            fpath = self._pathToFile(fname)
-            try:
-                os.remove(fpath)
-                print 'remove:'+fpath
-            except Exception as e:
-                print e
-                pass
-        self.removeList = []
+    # def flush(self):
+    #     if not self.initialized:
+    #         return
+    #     print 'flushing'
+    #     for fname in self.removeList:
+    #         fpath = self._pathToFile(fname)
+    #         try:
+    #             os.remove(fpath)
+    #             print 'remove:'+fpath
+    #         except Exception as e:
+    #             print e
+    #             pass
+    #     self.removeList = []
         
-        for fname in self.mappings:
-            fpath = self._pathToFile(fname)
-            if os.path.isfile(fpath):
-                continue
-            print 'save:'+fpath
-            fdir = os.path.dirname(fpath)
-            if fdir != '' and not os.path.isdir(fdir):
-                os.makedirs(fdir)
-            f = open(fpath, 'w')
-            f.write(self.mappings[fname].value)
+    #     for fname in self.mappings:
+    #         fpath = self._pathToFile(fname)
+    #         if os.path.isfile(fpath):
+    #             continue
+    #         print 'save:'+fpath
+    #         fdir = os.path.dirname(fpath)
+    #         if fdir != '' and not os.path.isdir(fdir):
+    #             os.makedirs(fdir)
+    #         f = open(fpath, 'w')
+    #         f.write(self.mappings[fname].value)
 
     def _pathToFile(self, path):
         if path == '/':
