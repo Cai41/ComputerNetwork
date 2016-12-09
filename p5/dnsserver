@@ -1,2 +1,2 @@
 #! /bin/bash
-sudo python dnsserver.py "$@"
+python dnsserver.py "$@"
