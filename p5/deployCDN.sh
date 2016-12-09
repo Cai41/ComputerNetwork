@@ -9,7 +9,7 @@ hosts=(ec2-54-210-1-206.compute-1.amazonaws.com
        ec2-13-54-30-86.ap-southeast-2.compute.amazonaws.com
        ec2-52-67-177-90.sa-east-1.compute.amazonaws.com
        ec2-35-156-54-135.eu-central-1.compute.amazonaws.com
-      )
+)
 
 while [[ $# -gt 1 ]]
 do
@@ -40,7 +40,8 @@ shift
 done
 
 for h in ${hosts[@]}; do
-	scp -i $KEYFILE LRUCache.py httpserver httpserver.py init download.py $USERNAME@$h:
+    scp -i $KEYFILE LRUCache.py httpserver httpserver.py init download.py $USERNAME@$h:
+    ssh -i $KEYFILE $USERNAME@$h 'mkdir data; chmod +x download.py; nohup python download.py  > /dev/null 2>&1 &'
 done
 
 scp -i $KEYFILE dnsserver dnsserver.py $USERNAME@cs5700cdnproject.ccs.neu.edu:
