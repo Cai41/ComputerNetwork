@@ -1,26 +1,23 @@
-1.High-level approach:
-We completed the basic http server and DNS server.
-(1). For http server, after it receives request, it examine whether the path is cached or in the file, if
-the request path is cached then it is directly returned to client; otherwise, the server would fetch data
-from origin, caching it and send back to client.
-(2). For DNS server, it just always return the address of one web server. After we complete the CDN mapping
-function, we would add it to DNS funcitonality.
+1.Preprocessing:
+(1).Grad ~1GB sample from https://dumps.wikimedia.org/other/pagecounts-raw/2014/2014-03/, and have each url's frequency
+(2).For top 500 url, try download from most frequent to least frequent. If origin 404, save that url to file 'notFound'; otherwise
+save url to file 'found', download at most 9MB.
 
-2.Performance enhancing:
-Since we are only building basic http server and DNS server, there is few performance enhancing except that
-http server caches all the pages. We also cache HTTP redirection.
+So we have two files:
+found -- a list of most frequent urls, with total size at most 9MB.
+notFound -- a list of most frequent ursl, which returns 404 from origin.
 
-3.Challengs:
-(1).Building DNS server needs to know DNS packet format and meaning of each field in the packet. Also, since
-the length of DNS Query is not fixed, it is a little bit hard to separate each question or addtional records
-from packet.
-(2).It is trade-off whether we cache HTTP redirection in web server and return it to client. We decide that
-after receving HTTP redirection(code 301/302), we perform redirect at web server, cache the final page and
-return it to client.
+Run preprocess.py to generate these two list, and this is done before submitting project.
 
-4.Next steps:
-(1).Build CDN, add function to DNS server to return the best ip address to the client. Maybe we'll try serveral
-approaches, measure their performance and choose the one that we think is the best.
-(2).Optimize cache strategy, since there is limited space in server. We may use LRU algorithm to improve the
-performance.
-(3).deploy/run/stop scripts that automatically configure all the servers.
+2.DepolyCDN
+Run python pre_download.py to download all the files in 'found'.
+
+3.RunCDN
+(1).When cache is initialized, it read 'notFound' to memory, for each url request that is in this list, return 404 directly.
+Also it reads all files to LRU.
+(2).When request comes, checks:
+(a).If it is in 'notFound', return 404 directly.
+(b).If in disk or memory, read them and respond.
+(c).Otherwise ask origin for that url.
+The files in disk will never be changed, they are the most frequent files accroding to preprocess.py, so we don't change
+them. We only run LRU in memory.

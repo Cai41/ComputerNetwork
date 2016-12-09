@@ -40,8 +40,8 @@ shift
 done
 
 for h in ${hosts[@]}; do
-    scp -i $KEYFILE LRUCache.py httpserver httpserver.py init download.py $USERNAME@$h:
-    ssh -i $KEYFILE $USERNAME@$h "mkdir data; chmod +x download.py; nohup python download.py  > /dev/null 2>&1 &"
+    scp -i $KEYFILE Cache.py httpserver httpserver.py init pre_download.py $USERNAME@$h:
+    ssh -i $KEYFILE $USERNAME@$h "mkdir data; chmod +x pre_download.py; nohup python pre_download.py > /dev/null 2>&1 &"
 done
 
 scp -i $KEYFILE dnsserver dnsserver.py $USERNAME@cs5700cdnproject.ccs.neu.edu:
