@@ -44,12 +44,9 @@ class DoubleList:
 class Cache:
     def __init__(self, capacity):
         self.cap = capacity
-        self.initialized = False
         self.items = DoubleList()
         self.mappings = {}
         self.size = 0
-        # self.flushCt = 0
-        # self.removeList = []
 
         # set of frequent urls that will return 404
         self.notFound = set([])
@@ -59,6 +56,14 @@ class Cache:
             self.notFound.add(l)
         f.close()
 
+        # most frequent 300 urls
+        self.freq = set([])
+        f = open('init_300', 'r')
+        lines = f.read().splitlines()
+        for l in lines:
+            self.freq.add(l)
+        f.close()
+        
         # initialize cache based on files on disk
         for subdir, dirs, files in os.walk(os.getcwd()+'/data/'):
             for file in files:
@@ -69,9 +74,8 @@ class Cache:
                     f.close()                    
                 except:
                     continue
-                self.insert(fname[fname.find('/data/')+6:], content)
+                self.insert(fname[fname.find('/data/')+5:], content)
                 print 'size:'+str(self.size)
-        self.initialized = True
         self.print_info()
         
     def contains(self, key):
@@ -104,46 +108,15 @@ class Cache:
             n = self.items.removeLast()
             self.size -= len(n.value)
             del self.mappings[n.key]
-            # self.removeList.append(n.key)
-
-        # self.flushCt += 1
-        # if self.flushCt >= 5:
-        #     self.flush()
-        #     self.flushCt = 0
-            
+    
         self.print_info()
         return True
-
-    # def flush(self):
-    #     if not self.initialized:
-    #         return
-    #     print 'flushing'
-    #     for fname in self.removeList:
-    #         fpath = self._pathToFile(fname)
-    #         try:
-    #             os.remove(fpath)
-    #             print 'remove:'+fpath
-    #         except Exception as e:
-    #             print e
-    #             pass
-    #     self.removeList = []
-        
-    #     for fname in self.mappings:
-    #         fpath = self._pathToFile(fname)
-    #         if os.path.isfile(fpath):
-    #             continue
-    #         print 'save:'+fpath
-    #         fdir = os.path.dirname(fpath)
-    #         if fdir != '' and not os.path.isdir(fdir):
-    #             os.makedirs(fdir)
-    #         f = open(fpath, 'w')
-    #         f.write(self.mappings[fname].value)
 
     def _pathToFile(self, path):
         if path == '/':
             return os.getcwd() + '/data/Main_Page'
         else:
-            return os.getcwd() + '/data/' + path
+            return os.getcwd() + '/data' + path
         
     def print_info(self):
         n = self.items.head.next

@@ -9,6 +9,7 @@ import Cache
 
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        print 'path:', self.path
         self.server.total += 1
         osPath = self._pathToFile(self.path)
         content = None
@@ -23,11 +24,11 @@ class WebHandler(BaseHTTPRequestHandler):
             content = self.server.cache.get(self.path)
         elif self.path in self.server.cache.notFound:
             self.server.hit += 1
-            self.send_error(e.code)
+            self.send_error(404)
+            print 'hit notFound list!'
             return
 
         if content is not None:
-            print 'cache found'
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
@@ -40,12 +41,15 @@ class WebHandler(BaseHTTPRequestHandler):
             except HTTPError as e:
                 print e.code, e.reason
                 self.send_error(e.code, e.reason)
+                self.server.cache.notFound.add(self.path)
+                self.flushNotFound()
                 return
             except URLError as e:
                 print e
+                self.send_error(500)                
                 return
             content = f.read()
-            if f.getcode() == 200:
+            if f.getcode() == 200 and self.path in self.server.cache.freq:
                 self.server.cache.insert(self.path, content)
             self.send_response(f.getcode())
             self.send_header('Content-Type', 'text/html')            
@@ -62,7 +66,13 @@ class WebHandler(BaseHTTPRequestHandler):
         if path == '/':
             return os.getcwd() + '/data/wiki/Main_Page'
         else:
-            return os.getcwd() + '/data/' + path
+            return os.getcwd() + '/data' + path
+
+    def flushNotFound(self):
+        f = open('notFound', 'w')
+        for i in self.server.cache.notFound:
+            f.write(i+'\n')
+        f.close()
         
 class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
