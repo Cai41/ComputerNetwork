@@ -59,8 +59,8 @@ class Cache:
                     f.close()                    
                 except:
                     continue
-                self.size += len(content)
                 self.insert(fname[fname.find('/data/')+6:], content)
+                print 'size:'+str(self.size)
         self.initialized = True
         
     def contains(self, key):
@@ -71,13 +71,15 @@ class Cache:
         n = self.mappings[key]
         n = self.items.remove(n)
         self.items.add(n)
+        self.print_info()        
         return n.value
 
     def insert(self, key, value):
         # if val's size is too large, return false because we can't cache it
         if len(value) >= self.cap:
             return False
-
+        
+        print self.size
         if key in self.mappings:
             n = self.items.remove(self.mappings[key])
             self.size = self.size - len(n.value) + len(value)
@@ -95,20 +97,23 @@ class Cache:
             del self.mappings[n.key]
             self.removeList.append(n.key)
 
-        self.count += 1
-        if self.flushCt >= 1:
+        self.flushCt += 1
+        if self.flushCt >= 5:
             self.flush()
             self.flushCt = 0
-
+            
+        self.print_info()
         return True
 
     def flush(self):
         if not self.initialized:
             return
+        print 'flushing'
         for fname in self.removeList:
             fpath = self._pathToFile(fname)
             try:
                 os.remove(fpath)
+                print 'remove:'+fpath
             except Exception as e:
                 print e
                 pass
@@ -116,6 +121,9 @@ class Cache:
         
         for fname in self.mappings:
             fpath = self._pathToFile(fname)
+            if os.path.isfile(fpath):
+                continue
+            print 'save:'+fpath
             fdir = os.path.dirname(fpath)
             if fdir != '' and not os.path.isdir(fdir):
                 os.makedirs(fdir)
@@ -131,7 +139,7 @@ class Cache:
     def print_info(self):
         n = self.items.head.next
         while n.key is not None:
-            print '[' + str(n.key) +', ' + str(n.value) + '], ',
+            print '[' + str(n.key) +', ' + "" + '], ',
             n = n.next
         print 'number of keys: ' + str(len(self.mappings)) + ', ',
         print 'total size: ' + str(self.size)

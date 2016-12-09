@@ -18,16 +18,18 @@ DNS Message Header:
 
 """
 
-hosts = [('ec2-54-167-4-20.compute-1.amazonaws.com', None),
-         ('ec2-54-210-1-206.compute-1.amazonaws.com', None),
-         ('ec2-54-67-25-76.us-west-1.compute.amazonaws.com', None),
-         ('ec2-35-161-203-105.us-west-2.compute.amazonaws.com', None),
-         ('ec2-52-213-13-179.eu-west-1.compute.amazonaws.com', None),
-         ('ec2-52-196-161-198.ap-northeast-1.compute.amazonaws.com', None),
-         ('ec2-54-255-148-115.ap-southeast-1.compute.amazonaws.com', None),
-         ('ec2-13-54-30-86.ap-southeast-2.compute.amazonaws.com', None),
-         ('ec2-52-67-177-90.sa-east-1.compute.amazonaws.com', None),
-         ('ec2-35-156-54-135.eu-central-1.compute.amazonaws.com', None)]
+# hosts = [('ec2-54-167-4-20.compute-1.amazonaws.com', None),
+#          ('ec2-54-210-1-206.compute-1.amazonaws.com', None),
+#          ('ec2-54-67-25-76.us-west-1.compute.amazonaws.com', None),
+#          ('ec2-35-161-203-105.us-west-2.compute.amazonaws.com', None),
+#          ('ec2-52-213-13-179.eu-west-1.compute.amazonaws.com', None),
+#          ('ec2-52-196-161-198.ap-northeast-1.compute.amazonaws.com', None),
+#          ('ec2-54-255-148-115.ap-southeast-1.compute.amazonaws.com', None),
+#          ('ec2-13-54-30-86.ap-southeast-2.compute.amazonaws.com', None),
+#          ('ec2-52-67-177-90.sa-east-1.compute.amazonaws.com', None),
+#          ('ec2-35-156-54-135.eu-central-1.compute.amazonaws.com', None)]
+hosts = [('ec2-54-67-25-76.us-west-1.compute.amazonaws.com', None),
+         ('ec2-35-161-203-105.us-west-2.compute.amazonaws.com', None)]
 
 dns_fmt = ['id', 'flags', 'qscount', 'ancount', 'nscount', 'adcount']
 record_fmt = ['name', 'type', 'class', 'ttl', 'len', 'rdata']
@@ -39,7 +41,6 @@ class DNSHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         dnsHeader, data = self._stripDNSHeader(self.request[0])
         sock = self.request[1]
-        print sock
         query, restData = self._extractQuery(data)
 
         ansHdr = self._hdrDict(dnsHeader['id'])
@@ -61,6 +62,7 @@ class DNSHandler(SocketServer.BaseRequestHandler):
                 print h
                 if h[1] not in self.server.rtt[clientIP]:
                     res = h[1]
+                    print 'found',h
                 if h[1] in self.server.rtt[clientIP]:
                     print 'recorded'
         elif clientIP in self.server.rtt:
@@ -115,12 +117,13 @@ class myServer(SocketServer.UDPServer):
             data, addr = self.sock.recvfrom(1024)
             data = data.split()
             print data
+            #data[0] is client's ip, data[1] is rtt between client and replica, addr[0] is replica's ip
             if data[0] not in self.rtt:
                 self.rtt[data[0]] = {}
-            if addr[0] not in self.rtt[data[0]]:
-                self.rtt[data[0]][addr[0]] = eval(data[1])
+            if str(addr[0]) not in self.rtt[data[0]]:
+                self.rtt[data[0]][str(addr[0])] = eval(data[1])
             else:
-                self.rtt[data[0]][addr[0]] = 0.5*self.rtt[data[0]][addr[0]] + 0.5*eval(data[1])
+                self.rtt[data[0]][str(addr[0])] = 0.5*self.rtt[data[0]][addr[0]] + 0.5*eval(data[1])
             print self.rtt
             
 if __name__ == "__main__":
