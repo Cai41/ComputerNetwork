@@ -5,7 +5,7 @@ import os
 import argparse
 import re
 import socket
-import LRUCache
+import Cache
 
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -68,7 +68,7 @@ class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
         HTTPServer.__init__(self, address, handler)
         self.origin = origin
-        self.cache = LRUCache.Cache(8*1024*1024)
+        self.cache = Cache.Cache(8*1024*1024)
         self.p = re.compile('rtt:([^\s]+)')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.rtt = {}

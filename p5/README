@@ -1,6 +1,6 @@
 1.Preprocessing:
 (1).Grab ~1GB sample from https://dumps.wikimedia.org/other/pagecounts-raw/2014/2014-03/,
-and have each url's frequency
+and have each url's frequency, the top 500 frequent urls are in file 'init', reverse order.
 (2).For top 500 url, try download from most frequent to least frequent. If origin returns 404,
 save that url to file 'notFound'; otherwise save url to file 'found', download at most 9MB.
 
@@ -22,3 +22,8 @@ in this list, return 404 directly. Also it reads all files to LRU.
 (c).Otherwise ask origin for that url.
 The files in disk will never be changed, they are the most frequent files accroding to
 preprocess.py, so we don't change them. We only run LRU in memory.
+
+4.stopCDN
+use killall
+
+5.cleanData is used to remove all the cached disk data
