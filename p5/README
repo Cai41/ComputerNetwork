@@ -1,7 +1,8 @@
 1.Preprocessing:
-(1).Grad ~1GB sample from https://dumps.wikimedia.org/other/pagecounts-raw/2014/2014-03/, and have each url's frequency
-(2).For top 500 url, try download from most frequent to least frequent. If origin 404, save that url to file 'notFound'; otherwise
-save url to file 'found', download at most 9MB.
+(1).Grab ~1GB sample from https://dumps.wikimedia.org/other/pagecounts-raw/2014/2014-03/,
+and have each url's frequency
+(2).For top 500 url, try download from most frequent to least frequent. If origin returns 404,
+save that url to file 'notFound'; otherwise save url to file 'found', download at most 9MB.
 
 So we have two files:
 found -- a list of most frequent urls, with total size at most 9MB.
@@ -13,11 +14,11 @@ Run preprocess.py to generate these two list, and this is done before submitting
 Run python pre_download.py to download all the files in 'found'.
 
 3.RunCDN
-(1).When cache is initialized, it read 'notFound' to memory, for each url request that is in this list, return 404 directly.
-Also it reads all files to LRU.
+(1).When cache is initialized, it read 'notFound' to memory, for each url request that is
+in this list, return 404 directly. Also it reads all files to LRU.
 (2).When request comes, checks:
 (a).If it is in 'notFound', return 404 directly.
 (b).If in disk or memory, read them and respond.
 (c).Otherwise ask origin for that url.
-The files in disk will never be changed, they are the most frequent files accroding to preprocess.py, so we don't change
-them. We only run LRU in memory.
+The files in disk will never be changed, they are the most frequent files accroding to
+preprocess.py, so we don't change them. We only run LRU in memory.

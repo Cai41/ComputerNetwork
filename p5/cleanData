@@ -40,8 +40,6 @@ shift
 done
 
 for h in ${hosts[@]}; do
-    scp -i $KEYFILE Cache.py httpserver httpserver.py found notFound init pre_download.py $USERNAME@$h:
-    ssh -i $KEYFILE $USERNAME@$h "mkdir data; chmod +x pre_download.py; nohup python pre_download.py > /dev/null 2>&1 &"
+    ssh -i $KEYFILE $USERNAME@$h "rm -rf data"
 done
 
-scp -i $KEYFILE dnsserver dnsserver.py $USERNAME@cs5700cdnproject.ccs.neu.edu:
