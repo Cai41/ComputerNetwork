@@ -13,7 +13,7 @@ class DoubleList:
         self.tail = Node(None, None)
         self.head.next = self.tail
         self.tail.prev = self.head
-        self.size = 0
+        self.size = 0                
 
     # insert after head
     def add(self, n):
@@ -44,11 +44,24 @@ class DoubleList:
 class Cache:
     def __init__(self, capacity):
         self.cap = capacity
+        self.initialized = False
         self.items = DoubleList()
         self.mappings = {}
         self.size = 0
-        self.count = 0
+        self.flushCt = 0
         self.removeList = []
+        for subdir, dirs, files in os.walk(os.getcwd()+'/data/'):
+            for file in files:
+                fname = os.path.join(subdir, file)
+                try:
+                    f = open(fname, 'r')
+                    content = f.read()
+                    f.close()                    
+                except:
+                    continue
+                self.size += len(content)
+                self.insert(fname[fname.find('/data/')+6:], content)
+        self.initialized = True
         
     def contains(self, key):
         return key in self.mappings
@@ -83,13 +96,15 @@ class Cache:
             self.removeList.append(n.key)
 
         self.count += 1
-        if self.count >= 1:
+        if self.flushCt >= 1:
             self.flush()
-            self.count = 0
+            self.flushCt = 0
 
         return True
 
     def flush(self):
+        if not self.initialized:
+            return
         for fname in self.removeList:
             fpath = self._pathToFile(fname)
             try:
@@ -107,12 +122,11 @@ class Cache:
             f = open(fpath, 'w')
             f.write(self.mappings[fname].value)
 
-
     def _pathToFile(self, path):
         if path == '/':
-            return os.curdir + '/index.html'
+            return os.getcwd() + '/data/Main_Page'
         else:
-            return os.curdir + path
+            return os.getcwd() + '/data/' + path
         
     def print_info(self):
         n = self.items.head.next

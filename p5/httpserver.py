@@ -10,16 +10,11 @@ import LRUCache
 class WebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         osPath = self._pathToFile(self.path)
-        cached = False
         content = None
-        if os.path.isfile(osPath):
-            content = open(osPath).read()
-            cached = True
-        elif self.server.cache.contains(self.path):
+        if self.server.cache.contains(self.path):
             content = self.server.cache.get(self.path)
-            cached = True
 
-        if cached:
+        if content is not None:
             print 'cache found'
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
@@ -52,10 +47,10 @@ class WebHandler(BaseHTTPRequestHandler):
         
     def _pathToFile(self, path):
         if path == '/':
-            return os.curdir + '/index.html'
+            return os.getcwd() + '/data/wiki/Main_Page'
         else:
-            return os.curdir + path
-
+            return os.getcwd() + '/data/' + path
+        
 class WebServer(HTTPServer):
     def __init__(self, address, handler, origin):
         HTTPServer.__init__(self, address, handler)
