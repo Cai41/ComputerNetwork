@@ -44,7 +44,7 @@ class WebHandler(BaseHTTPRequestHandler):
                 print e.code, e.reason
                 self.send_error(e.code, e.reason)
                 self.server.cache.notFound.add(self.path)
-                self.flushNotFound()
+                # self.flushNotFound()
                 return
             except URLError as e:
                 print e
