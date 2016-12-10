@@ -38,17 +38,18 @@ If the current choice becomes slow for a client, its RTT will get higher and we
 naturally assign a replica that's better.
 
 # Challenges
+1. Measure the latency between client and replica. This is difficult since we have no
+access to the client-perceived latency. At the beginning, we were considering active measurement
+and GeoIP, but they are not flexible and scalable. Thus at last we decided to use passive measurement,
+each time a replica communicating with client, its rtt is sent back to DNS server.
 
-Design a good caching method now that we know the request frequencies.
+2. Design a good caching method now that we know the request frequencies. So LFU would be the
+best strategy to choose cache.
 
-Testing since at later stage everything is done through SSH, logs helped.
+3. Testing since at later stage everything is done through SSH, logs helped.
 
 # Future improvement:
 
 - We would definite switch to active probes to measure RTT if we had more time.
   Actually we already have some code prepared including a TCP ping
   implementation. Somehow we couldn't get Scamper to use its built-in TCP ping.
-
-
-
-

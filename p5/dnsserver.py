@@ -54,7 +54,7 @@ class DNSHandler(SocketServer.BaseRequestHandler):
             skip = ord(query[i])
         # query type is the 2 bytes after query name
         q_type = struct.unpack('!H', query[i+1:i+3])[0]
-        print 'qtype', q_type
+        # print 'qtype', q_type
 
         # only responding to packets that requesting server.name and type 1
         if q_name == self.server.name and q_type == 1:
@@ -77,10 +77,10 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         if clientIP in self.server.rtt and len(self.server.rtt[clientIP]) < len(hosts):
             print 'client met before'
             for h in hosts:
-                print h
+                # print h
                 if h[1] not in self.server.rtt[clientIP]:
                     res = h[1]
-                    print 'found',h
+                    print 'found ',h
                 # if h[1] in self.server.rtt[clientIP]:
                 #     print 'recorded'
         # if we know rtt from client to all replica, return the one with lowest
@@ -94,7 +94,7 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         header = struct.unpack('!HHHHHH', data[:12])
         header_dict = dict(zip(dns_fmt, header))
         print 'strip'
-        print header_dict, data[12:]
+        # print header_dict, data[12:]
         return header_dict, data[12:]
 
     def _hdrDict(self, id):
@@ -108,7 +108,7 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         return {'name':name, 'type':1, 'class':1, 'ttl':100,'len':4,'rdata':ip}
 
     def _buildRec(self, rec):
-        print rec
+        # print rec
         return rec['name'] + struct.pack('!HHIH', rec['type'],rec['class'],rec['ttl'],rec['len']) + rec['rdata']
 
     def _extractQuery(self, data):
@@ -141,7 +141,7 @@ class myServer(SocketServer.UDPServer):
         while True:
             data, addr = self.sock.recvfrom(1024)
             data = data.split()
-            print data
+            # print data
             #data[0] is client's ip, data[1] is rtt between client and replica, addr[0] is replica's ip
             if data[0] not in self.rtt:
                 self.rtt[data[0]] = {}
