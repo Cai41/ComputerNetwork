@@ -20,8 +20,35 @@ Based on request statistics, caching 10MB of top ranked webpages can achieve
 ~40% of hit rate on the cache. We decide to put them on disk to keep this part 
 of cache persistent.
 
-Webpages ranked after those top ranked files appears less often and we use a LRU 
-cache in memory caching this part to achieve even higher hit ratio.
+Webpages ranked after those top ranked files to around 500 appears less often 
+and we use a 10MB LRU cache in memory caching this part to achieve even higher hit ratio.
+
+After rank 500, webpages are requested at very low frequency and we don't try to
+cache them.
+
+5. Choosing replica
+Right now we use a very simple mechanism: for the first few requests from a
+particular client, we direct the client to each of the replica servers. After
+one round, we know the RTT from each replica to this client, and then DNS
+returns the replica with lowest RTT for that client. (After every
+request, the replica server send its RTT, which is measured by the command 'ss' 
+to DNS server and DNS server keeps track of all RTTs between replicas and clients)
+
+If the current choice becomes slow for a client, its RTT will get higher and we
+naturally assign a replica that's better.
+
+# Challenges
+
+Design a good caching method now that we know the request frequencies.
+
+Testing since at later stage everything is done through SSH, logs helped.
+
+# Future improvement:
+
+- We would definite switch to active probes to measure RTT if we had more time.
+  Actually we already have some code prepared including a TCP ping
+  implementation. Somehow we couldn't get Scamper to use its built-in TCP ping.
+
 
 
 
