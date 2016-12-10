@@ -39,15 +39,27 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         dnsHeader, data = self._stripDNSHeader(self.request[0])
         sock = self.request[1]
         query, restData = self._extractQuery(data)
+        q_name = ''
+        i = 0
+        skip = ord(query[i])
+        while skip != 0:
+            if i != 0:
+                q_name += '.'
+            q_name += query[i+1:i+1+skip]
+            i += (1 + skip)
+            skip = ord(query[i])
+        q_type = struct.unpack('!H', query[i+1:i+3])[0]
+        print 'qtype', q_type
 
-        ansHdr = self._hdrDict(dnsHeader['id'])
-        print self.client_address
-        recDict = self._recDict(self._encodeName('cs5700cdnproject.ccs.neu.edu'), self._select_best(self.client_address[0]))
-        ansHdr['flags'] = 1 << 15
+        if q_name == self.server.name and q_type == 1:
+            ansHdr = self._hdrDict(dnsHeader['id'])
+            print self.client_address
+            recDict = self._recDict(self._encodeName(self.server.name), self._select_best(self.client_address[0]))
+            ansHdr['flags'] = 1 << 15
 
-        sendData = self._buildHdr(ansHdr) + query + self._buildRec(recDict)
-        # print ':'.join(x.encode('hex') for x in sendData)
-        sock.sendto(sendData, self.client_address)
+            sendData = self._buildHdr(ansHdr) + query + self._buildRec(recDict)
+            # print ':'.join(x.encode('hex') for x in sendData)
+            sock.sendto(sendData, self.client_address)
 
     def _select_best(self, clientIP):
         res = hosts[0][1]
@@ -70,7 +82,8 @@ class DNSHandler(SocketServer.BaseRequestHandler):
     def _stripDNSHeader(self, data):
         header = struct.unpack('!HHHHHH', data[:12])
         header_dict = dict(zip(dns_fmt, header))
-        print header_dict
+        print 'strip'
+        print header_dict, data[12:]
         return header_dict, data[12:]
 
     def _hdrDict(self, id):
@@ -102,11 +115,12 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         return res
 
 class myServer(SocketServer.UDPServer):
-    def __init__(self, addr, handler):
+    def __init__(self, addr, handler, name):
         SocketServer.UDPServer.__init__(self, addr, handler)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', 55555))
         self.rtt = {}
+        self.name = name
         Thread(target = self._accept_rtt).start()
 
     def _accept_rtt(self):
@@ -128,5 +142,5 @@ if __name__ == "__main__":
     parser.add_argument('-p', metavar='port', dest = 'port', help='port number.')
     parser.add_argument('-n', dest='name', help='name to be translated')
     args = parser.parse_args()
-    server = myServer(('', int(args.port)), DNSHandler)
+    server = myServer(('', int(args.port)), DNSHandler, args.name)
     server.serve_forever()
