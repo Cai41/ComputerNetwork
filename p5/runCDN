@@ -42,7 +42,7 @@ done
 for h in "${hosts[@]}"
 do
     # note: must use double quote here
-    ssh -i $KEYFILE $USERNAME@$h "chmod +x httpserver; nohup ./httpserver -p $PORT -o $ORIGIN  > /dev/null 2>&1 &"
+    ssh -i $KEYFILE $USERNAME@$h "chmod +x httpserver; nohup ./httpserver -p $PORT -o $ORIGIN > http.out 2>&1 &"
 done
 
-ssh -i $KEYFILE $USERNAME@cs5700cdnproject.ccs.neu.edu "chmod +x dnsserver; nohup ./dnsserver -p $PORT -n $NAME > /dev/null 2>&1 &"
+ssh -i $KEYFILE $USERNAME@cs5700cdnproject.ccs.neu.edu "chmod +x dnsserver; nohup ./dnsserver -p $PORT -n $NAME > dns.log >&1 &"

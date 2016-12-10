@@ -42,7 +42,7 @@ done
 for h in "${hosts[@]}"
 do
     # note: must use double quote here
-    ssh -i $KEYFILE $USERNAME@$h "killall python > /dev/null 2>&1 &"
+    ssh -i $KEYFILE $USERNAME@$h "killall python -u $USERNAME; rm -rf data"
 done
 
-ssh -i $KEYFILE $USERNAME@cs5700cdnproject.ccs.neu.edu "killall python > /dev/null 2>&1 &"
+ssh -i $KEYFILE $USERNAME@cs5700cdnproject.ccs.neu.edu "killall python -u $USERNAME"

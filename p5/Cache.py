@@ -65,18 +65,18 @@ class Cache:
         f.close()
         
         # initialize cache based on files on disk
-        for subdir, dirs, files in os.walk(os.getcwd()+'/data/'):
-            for file in files:
-                fname = os.path.join(subdir, file)
-                try:
-                    f = open(fname, 'r')
-                    content = f.read()
-                    f.close()                    
-                except:
-                    continue
-                self.insert(fname[fname.find('/data/')+5:], content)
-                print 'size:'+str(self.size)
-        self.print_info()
+        # for subdir, dirs, files in os.walk(os.getcwd()+'/data/'):
+        #     for file in files:
+        #         fname = os.path.join(subdir, file)
+        #         try:
+        #             f = open(fname, 'r')
+        #             content = f.read()
+        #             f.close()                    
+        #         except:
+        #             continue
+        #         self.insert(fname[fname.find('/data/')+5:], content)
+        #         print 'size:'+str(self.size)
+        # self.print_info()
         
     def contains(self, key):
         return key in self.mappings
@@ -109,7 +109,7 @@ class Cache:
             self.size -= len(n.value)
             del self.mappings[n.key]
     
-        self.print_info()
+        # self.print_info()
         return True
 
     def _pathToFile(self, path):

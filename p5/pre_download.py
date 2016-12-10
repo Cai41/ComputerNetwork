@@ -1,17 +1,17 @@
 import os
 import urllib2
 
-fd = open('found', 'r')
+fd = open('init_300', 'r')
 lines = fd.read().splitlines()
 total = 0
-for l in reversed(lines):
+for l in lines:
     try:
         response = urllib2.urlopen('http://ec2-54-167-4-20.compute-1.amazonaws.com:8080'+l)
         html = response.read()
     except:
         continue
     
-    if total >= 9*1024*1024:
+    if total >= 10*1024*1024:
         break
 
     fpath = os.getcwd()+'/data'+l

@@ -1,0 +1,1 @@
+dig @cs5700cdnproject.ccs.neu.edu -p 50012 123.cdn.com

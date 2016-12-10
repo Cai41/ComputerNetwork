@@ -1,0 +1,2 @@
+#!/bin/bash
+time wget "$@":50012/wiki/Main_Page
