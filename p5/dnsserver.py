@@ -18,6 +18,7 @@ DNS Message Header:
 
 """
 
+# list of replica servers
 hosts = [('ec2-54-210-1-206.compute-1.amazonaws.com', None),
          ('ec2-54-67-25-76.us-west-1.compute.amazonaws.com', None),
          ('ec2-35-161-203-105.us-west-2.compute.amazonaws.com', None),
@@ -31,6 +32,7 @@ hosts = [('ec2-54-210-1-206.compute-1.amazonaws.com', None),
 dns_fmt = ['id', 'flags', 'qscount', 'ancount', 'nscount', 'adcount']
 record_fmt = ['name', 'type', 'class', 'ttl', 'len', 'rdata']
 
+# update replica IPs
 for i in range(len(hosts)):
     hosts[i] = (hosts[i][0], socket.gethostbyname(hosts[i][0]))
     
@@ -40,6 +42,8 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         sock = self.request[1]
         query, restData = self._extractQuery(data)
         q_name = ''
+        # after dnsHeader, query name is variabal length, each piece
+        # starts with length, a piece of length 0 is the end of query name
         i = 0
         skip = ord(query[i])
         while skip != 0:
@@ -48,9 +52,11 @@ class DNSHandler(SocketServer.BaseRequestHandler):
             q_name += query[i+1:i+1+skip]
             i += (1 + skip)
             skip = ord(query[i])
+        # query type is the 2 bytes after query name
         q_type = struct.unpack('!H', query[i+1:i+3])[0]
         print 'qtype', q_type
 
+        # only responding to packets that requesting server.name and type 1
         if q_name == self.server.name and q_type == 1:
             ansHdr = self._hdrDict(dnsHeader['id'])
             print self.client_address
@@ -62,18 +68,23 @@ class DNSHandler(SocketServer.BaseRequestHandler):
             sock.sendto(sendData, self.client_address)
 
     def _select_best(self, clientIP):
+        # default is the first replica
         res = hosts[0][1]
         print clientIP
         print self.server.rtt
+        # if client is known but we don't know its latency to all replica,
+        # select a replica that we have never assigned for this client
         if clientIP in self.server.rtt and len(self.server.rtt[clientIP]) < len(hosts):
-            print 'client meet before'
+            print 'client met before'
             for h in hosts:
                 print h
                 if h[1] not in self.server.rtt[clientIP]:
                     res = h[1]
                     print 'found',h
-                if h[1] in self.server.rtt[clientIP]:
-                    print 'recorded'
+                # if h[1] in self.server.rtt[clientIP]:
+                #     print 'recorded'
+        # if we know rtt from client to all replica, return the one with lowest
+        # rtt
         elif clientIP in self.server.rtt:
             res =  min(self.server.rtt[clientIP], key = self.server.rtt[clientIP].get)
         print res
@@ -101,6 +112,7 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         return rec['name'] + struct.pack('!HHIH', rec['type'],rec['class'],rec['ttl'],rec['len']) + rec['rdata']
 
     def _extractQuery(self, data):
+        # query part ends with \x00
         pos = data.find('\x00')
         pos += 5
         return data[:pos], data[pos:]
@@ -115,10 +127,12 @@ class DNSHandler(SocketServer.BaseRequestHandler):
         return res
 
 class myServer(SocketServer.UDPServer):
-    def __init__(self, addr, handler, name):
+    def __init__(self, addr, handler, name, port):
         SocketServer.UDPServer.__init__(self, addr, handler)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('', 55555))
+        # select a port to receive rtt info from
+        rttserver_port = 55555 if int(port) != 55555 else 55556
+        self.sock.bind(('', rttserver_port))
         self.rtt = {}
         self.name = name
         Thread(target = self._accept_rtt).start()
@@ -142,5 +156,5 @@ if __name__ == "__main__":
     parser.add_argument('-p', metavar='port', dest = 'port', help='port number.')
     parser.add_argument('-n', dest='name', help='name to be translated')
     args = parser.parse_args()
-    server = myServer(('', int(args.port)), DNSHandler, args.name)
+    server = myServer(('', int(args.port)), DNSHandler, args.name, args.port)
     server.serve_forever()

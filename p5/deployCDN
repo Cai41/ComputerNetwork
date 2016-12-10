@@ -40,8 +40,8 @@ shift
 done
 
 for h in ${hosts[@]}; do
-    scp -i $KEYFILE init_300 Cache.py httpserver httpserver.py notFound data.tar.gz $USERNAME@$h: > /dev/null 
-    ssh -i $KEYFILE $USERNAME@$h "tar xzvf data.tar.gz" > /dev/null 
+    scp -i $KEYFILE init_300 Cache.py httpserver httpserver.py notFound data_leonyang.tar.gz $USERNAME@$h: > /dev/null 
+    ssh -i $KEYFILE $USERNAME@$h "tar xzvf data_leonyang.tar.gz" > /dev/null 
 done
 
 scp -i $KEYFILE dnsserver dnsserver.py $USERNAME@cs5700cdnproject.ccs.neu.edu: > /dev/null 

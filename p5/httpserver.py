@@ -28,12 +28,14 @@ class WebHandler(BaseHTTPRequestHandler):
             print 'hit notFound list!'
             return
 
+        # found in disk or memory cache
         if content is not None:
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
             self.wfile.write(content)
         else:
+            # not found in cache, download from origin
             reqPath = 'http://' + self.server.origin + ':8080'+ self.path
             print reqPath
             try:
@@ -55,19 +57,23 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/html')            
             self.end_headers()
             self.wfile.write(content)
+        # get rtt of this connection to this client and send it to dns
         output = Popen(['ss', '-i', 'dst' , self.client_address[0]], stdout = PIPE).communicate()[0]
         rtt = self.server.p.search(output).group(1).split('/')[0]
-        self.server.sock.sendto(str(self.client_address[0]) + ' ' + str(rtt), ('cs5700cdnproject.ccs.neu.edu', 55555))
+        rttserver_port = 55555 if int(self.server.port) != 55555 else 55556
+        self.server.sock.sendto(str(self.client_address[0]) + ' ' + str(rtt),
+                ('cs5700cdnproject.ccs.neu.edu', rttserver_port))
         self.server.rtt[self.client_address[0]] = rtt
         print rtt
         print 'hit rate:',str(self.server.hit*1.0/self.server.total)
         
     def _pathToFile(self, path):
         if path == '/':
-            return os.getcwd() + '/data/wiki/Main_Page'
+            return os.getcwd() + '/data_leonyang/wiki/Main_Page'
         else:
-            return os.getcwd() + '/data' + path
+            return os.getcwd() + '/data_leonyang' + path
 
+    # save 404 list on disk
     def flushNotFound(self):
         f = open('notFound', 'w')
         for i in self.server.cache.notFound:
@@ -75,7 +81,7 @@ class WebHandler(BaseHTTPRequestHandler):
         f.close()
         
 class WebServer(HTTPServer):
-    def __init__(self, address, handler, origin):
+    def __init__(self, address, handler, origin, port):
         HTTPServer.__init__(self, address, handler)
         self.origin = origin
         self.cache = Cache.Cache(8*1024*1024)
@@ -84,11 +90,12 @@ class WebServer(HTTPServer):
         self.rtt = {}
         self.total = 0
         self.hit = 0
+        self.port = port
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="client")
     parser.add_argument('-p', metavar='port', dest = 'port', help='port number.')
     parser.add_argument('-o', dest='origin', help='origin server')
     args = parser.parse_args()
-    server = WebServer(('', int(args.port)), WebHandler, args.origin)
+    server = WebServer(('', int(args.port)), WebHandler, args.origin, args.port)
     server.serve_forever()
